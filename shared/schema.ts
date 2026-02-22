@@ -71,7 +71,9 @@ export const serviceRequests = pgTable("service_requests", {
   status: text("status").notNull().default("pending"),
   estimatedPrice: decimal("estimated_price", { precision: 10, scale: 2 }),
   assignedCleanerId: varchar("assigned_cleaner_id"),
+  preferredCleanerId: varchar("preferred_cleaner_id"),
   jobId: varchar("job_id"),
+  squareFootage: integer("square_footage"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -110,6 +112,17 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const jobOffers = pgTable("job_offers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceRequestId: varchar("service_request_id").notNull(),
+  cleanerId: varchar("cleaner_id").notNull(),
+  status: text("status").notNull().default("offered"),
+  priorityRank: integer("priority_rank").notNull().default(0),
+  offeredAt: timestamp("offered_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  expiresAt: timestamp("expires_at"),
+});
+
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -117,6 +130,8 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   type: text("type").notNull().default("job_assigned"),
   jobId: varchar("job_id"),
+  serviceRequestId: varchar("service_request_id"),
+  jobOfferId: varchar("job_offer_id"),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -130,6 +145,7 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, c
 export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true });
 export const insertCleanerAvailabilitySchema = createInsertSchema(cleanerAvailability).omit({ id: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
+export const insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, offeredAt: true, respondedAt: true });
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -149,3 +165,5 @@ export type CleanerAvailability = typeof cleanerAvailability.$inferSelect;
 export type InsertCleanerAvailability = z.infer<typeof insertCleanerAvailabilitySchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type JobOffer = typeof jobOffers.$inferSelect;
+export type InsertJobOffer = z.infer<typeof insertJobOfferSchema>;

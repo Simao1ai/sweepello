@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, MapPin, User, Clock, DollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, User, Clock, DollarSign, Send, Radio, Home, Building2, Hotel } from "lucide-react";
 import type { Cleaner, ServiceRequest } from "@shared/schema";
 
 interface CalendarEvent {
@@ -24,6 +24,7 @@ interface CalendarEvent {
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/80 hover:bg-yellow-500",
+  broadcasting: "bg-cyan-500/80 hover:bg-cyan-500",
   assigned: "bg-blue-500/80 hover:bg-blue-500",
   in_progress: "bg-purple-500/80 hover:bg-purple-500",
   completed: "bg-green-500/80 hover:bg-green-500",
@@ -72,6 +73,23 @@ export default function Schedule() {
     },
   });
 
+  const broadcastMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const res = await apiRequest("POST", `/api/service-requests/${requestId}/broadcast`);
+      return res.json();
+    },
+    onSuccess: (data: { offersCreated: number }) => {
+      toast({
+        title: "Job broadcast sent!",
+        description: `Notified ${data.offersCreated} available cleaner(s) in the area.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Broadcast failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
@@ -92,13 +110,13 @@ export default function Schedule() {
   const getRequestsForDay = (day: number) => {
     if (!serviceRequests) return [];
     return serviceRequests.filter(r => {
-      if (r.status !== "pending") return false;
+      if (r.status !== "pending" && r.status !== "broadcasting") return false;
       const d = new Date(r.requestedDate);
       return d.getDate() === day && d.getMonth() === month && d.getFullYear() === year;
     });
   };
 
-  const pendingRequests = serviceRequests?.filter(r => r.status === "pending") || [];
+  const pendingRequests = serviceRequests?.filter(r => r.status === "pending" || r.status === "broadcasting") || [];
 
   return (
     <div className="p-6 space-y-6">
@@ -228,6 +246,7 @@ export default function Schedule() {
             <CardContent className="space-y-2">
               {[
                 { label: "New Request", color: "bg-orange-500" },
+                { label: "Broadcasting", color: "bg-cyan-500" },
                 { label: "Pending", color: "bg-yellow-500" },
                 { label: "Assigned", color: "bg-blue-500" },
                 { label: "In Progress", color: "bg-purple-500" },
@@ -246,7 +265,7 @@ export default function Schedule() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign Cleaner to Request</DialogTitle>
+            <DialogTitle>Manage Service Request</DialogTitle>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
@@ -268,13 +287,62 @@ export default function Schedule() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <span>Est. ${Number(selectedRequest.estimatedPrice || 0).toFixed(0)}</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Home className="h-4 w-4 text-muted-foreground" />
+                  <Badge variant="secondary" className="text-xs capitalize">
+                    {selectedRequest.propertyType}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedRequest.bedrooms}BR / {selectedRequest.bathrooms}BA
+                  </span>
+                </div>
+                {selectedRequest.preferredCleanerId && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-yellow-600" />
+                    <span className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">Client requested a preferred cleaner</span>
+                  </div>
+                )}
                 {selectedRequest.specialInstructions && (
                   <p className="text-muted-foreground italic">"{selectedRequest.specialInstructions}"</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Cleaner</label>
+              {selectedRequest.status === "broadcasting" && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 flex items-start gap-2">
+                  <Radio className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0 animate-pulse" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Broadcasting to cleaners</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">Waiting for a cleaner to accept this job.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="border rounded-lg p-3 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Send className="h-4 w-4" /> Auto-Broadcast
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedRequest.status === "broadcasting"
+                    ? "Re-broadcast to notify additional cleaners"
+                    : "Send this job to available cleaners sorted by rating"}
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => broadcastMutation.mutate(selectedRequest.id)}
+                  disabled={broadcastMutation.isPending}
+                  data-testid="button-broadcast"
+                >
+                  <Radio className="h-4 w-4" />
+                  {broadcastMutation.isPending ? "Broadcasting..." : selectedRequest.status === "broadcasting" ? "Re-Broadcast" : "Broadcast to Cleaners"}
+                </Button>
+              </div>
+
+              <div className="border rounded-lg p-3 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <User className="h-4 w-4" /> Manual Assignment
+                </p>
+                <p className="text-xs text-muted-foreground">Directly assign a cleaner to this job</p>
                 <Select value={selectedCleaner} onValueChange={setSelectedCleaner}>
                   <SelectTrigger data-testid="select-cleaner-assign">
                     <SelectValue placeholder="Choose a cleaner..." />
@@ -291,19 +359,18 @@ export default function Schedule() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  className="w-full"
+                  disabled={!selectedCleaner || assignMutation.isPending}
+                  onClick={() => assignMutation.mutate({
+                    requestId: selectedRequest.id,
+                    cleanerId: selectedCleaner,
+                  })}
+                  data-testid="button-confirm-assign"
+                >
+                  {assignMutation.isPending ? "Assigning..." : "Assign & Create Job"}
+                </Button>
               </div>
-
-              <Button
-                className="w-full"
-                disabled={!selectedCleaner || assignMutation.isPending}
-                onClick={() => assignMutation.mutate({
-                  requestId: selectedRequest.id,
-                  cleanerId: selectedCleaner,
-                })}
-                data-testid="button-confirm-assign"
-              >
-                {assignMutation.isPending ? "Assigning..." : "Assign & Create Job"}
-              </Button>
             </div>
           )}
         </DialogContent>

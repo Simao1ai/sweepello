@@ -3,13 +3,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, BellOff, CheckCheck, MapPin } from "lucide-react";
+import { Bell, BellOff, CheckCheck, Check, X, Zap, Star } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Notification } from "@shared/schema";
 
-const typeIcons: Record<string, string> = {
-  job_assigned: "New Cleaning",
+const typeLabels: Record<string, string> = {
+  job_assigned: "Job Confirmed",
+  job_offer: "Job Offer",
   job_updated: "Job Update",
   job_cancelled: "Cancellation",
 };
@@ -39,6 +40,37 @@ export default function ContractorNotifications() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       toast({ title: "All notifications marked as read" });
+    },
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const res = await apiRequest("POST", `/api/contractor/offers/${offerId}/accept`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/offers"] });
+      toast({ title: "Job Accepted!", description: "Check your Jobs page for details." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Couldn't accept job", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: async (offerId: string) => {
+      const res = await apiRequest("POST", `/api/contractor/offers/${offerId}/decline`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/offers"] });
+      toast({ title: "Offer declined" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
 
@@ -80,61 +112,109 @@ export default function ContractorNotifications() {
             <BellOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No notifications</h3>
             <p className="text-sm text-muted-foreground">
-              You'll receive notifications here when new jobs are assigned to you.
+              You'll receive notifications here when new jobs are available in your area.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {sorted.map(notification => (
-            <Card
-              key={notification.id}
-              className={`transition-all ${!notification.isRead ? "border-primary/40 bg-primary/5" : "opacity-75"}`}
-              data-testid={`card-notification-${notification.id}`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className={`mt-1 p-1.5 rounded-full ${!notification.isRead ? "bg-primary/10" : "bg-muted"}`}>
-                      <Bell className={`h-4 w-4 ${!notification.isRead ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm" data-testid={`text-title-${notification.id}`}>
-                          {notification.title}
-                        </span>
-                        <Badge variant="secondary" className="text-xs">
-                          {typeIcons[notification.type] || notification.type}
-                        </Badge>
-                        {!notification.isRead && (
-                          <span className="h-2 w-2 rounded-full bg-primary" data-testid={`badge-unread-${notification.id}`} />
+          {sorted.map(notification => {
+            const isJobOffer = notification.type === "job_offer";
+            const isPreferred = notification.title?.includes("Preferred") || notification.title?.includes("Priority");
+
+            return (
+              <Card
+                key={notification.id}
+                className={`transition-all ${
+                  !notification.isRead
+                    ? isPreferred
+                      ? "border-yellow-400/60 bg-yellow-50/30 dark:bg-yellow-950/10"
+                      : "border-primary/40 bg-primary/5"
+                    : "opacity-75"
+                }`}
+                data-testid={`card-notification-${notification.id}`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={`mt-1 p-1.5 rounded-full ${
+                        isPreferred ? "bg-yellow-100 dark:bg-yellow-900/30" :
+                        !notification.isRead ? "bg-primary/10" : "bg-muted"
+                      }`}>
+                        {isPreferred ? (
+                          <Star className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        ) : isJobOffer ? (
+                          <Zap className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Bell className={`h-4 w-4 ${!notification.isRead ? "text-primary" : "text-muted-foreground"}`} />
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground" data-testid={`text-message-${notification.id}`}>
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(notification.createdAt!).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
-                        })}
-                      </p>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm" data-testid={`text-title-${notification.id}`}>
+                            {notification.title}
+                          </span>
+                          <Badge variant={isJobOffer ? "default" : "secondary"} className="text-xs">
+                            {typeLabels[notification.type] || notification.type}
+                          </Badge>
+                          {!notification.isRead && (
+                            <span className="h-2 w-2 rounded-full bg-primary" data-testid={`badge-unread-${notification.id}`} />
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground" data-testid={`text-message-${notification.id}`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(notification.createdAt!).toLocaleDateString("en-US", {
+                            month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isJobOffer && notification.jobOfferId && !notification.isRead && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => acceptMutation.mutate(notification.jobOfferId!)}
+                            disabled={acceptMutation.isPending || declineMutation.isPending}
+                            data-testid={`button-accept-${notification.id}`}
+                          >
+                            <Check className="h-3 w-3" /> Accept
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              declineMutation.mutate(notification.jobOfferId!);
+                              markReadMutation.mutate(notification.id);
+                            }}
+                            disabled={acceptMutation.isPending || declineMutation.isPending}
+                            data-testid={`button-decline-${notification.id}`}
+                          >
+                            <X className="h-3 w-3" /> Decline
+                          </Button>
+                        </>
+                      )}
+                      {!isJobOffer && !notification.isRead && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markReadMutation.mutate(notification.id)}
+                          disabled={markReadMutation.isPending}
+                          data-testid={`button-read-${notification.id}`}
+                        >
+                          Mark Read
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  {!notification.isRead && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => markReadMutation.mutate(notification.id)}
-                      disabled={markReadMutation.isPending}
-                      data-testid={`button-read-${notification.id}`}
-                    >
-                      Mark Read
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

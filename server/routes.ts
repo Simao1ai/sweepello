@@ -8,6 +8,7 @@ import {
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
+import { calculatePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -71,13 +72,48 @@ export async function registerRoutes(
       const request = await storage.createServiceRequest(validated);
 
       const bedrooms = request.bedrooms || 2;
-      const basePrice = 100 + (bedrooms * 25);
-      const updated = await storage.updateServiceRequest(request.id, { estimatedPrice: String(basePrice) });
+      const bathrooms = request.bathrooms || 1;
+      const propertyType = request.propertyType || "airbnb";
+      const price = calculatePrice(propertyType, bedrooms, bathrooms, request.squareFootage || undefined);
+      const updated = await storage.updateServiceRequest(request.id, { estimatedPrice: String(price) });
+
+      try {
+        await broadcastJobOffers(updated!.id);
+      } catch (broadcastErr) {
+        console.error("Auto-broadcast failed:", broadcastErr);
+      }
 
       res.json(updated);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
     }
+  });
+
+  app.get("/api/pricing-estimate", async (req, res) => {
+    const { propertyType, bedrooms, bathrooms, squareFootage } = req.query;
+    const price = calculatePrice(
+      String(propertyType || "airbnb"),
+      Number(bedrooms || 2),
+      Number(bathrooms || 1),
+      squareFootage ? Number(squareFootage) : undefined
+    );
+    res.json({ estimatedPrice: price });
+  });
+
+  app.get("/api/client/previous-cleaners", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const myRequests = await storage.getServiceRequestsByUserId(userId);
+    const completedWithCleaner = myRequests.filter(r => r.status === "completed" && r.assignedCleanerId);
+    const cleanerIds = [...new Set(completedWithCleaner.map(r => r.assignedCleanerId!))];
+    const cleanerList = [];
+    for (const id of cleanerIds) {
+      const cleaner = await storage.getCleaner(id);
+      if (cleaner && cleaner.status === "active") {
+        cleanerList.push({ id: cleaner.id, name: cleaner.name, rating: cleaner.rating });
+      }
+    }
+    cleanerList.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    res.json(cleanerList);
   });
 
   app.get("/api/service-requests/mine", isAuthenticated, async (req, res) => {
@@ -378,6 +414,29 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/service-requests/:id/broadcast", isAuthenticated, async (req, res) => {
+    try {
+      const admin = await isAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Admin only" });
+      const result = await broadcastJobOffers(req.params.id);
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.get("/api/service-requests/:id/offers", isAuthenticated, async (req, res) => {
+    const admin = await isAdmin(req);
+    if (!admin) return res.status(403).json({ message: "Admin only" });
+    const offers = await storage.getJobOffersByServiceRequest(req.params.id);
+    const enriched = [];
+    for (const offer of offers) {
+      const cleaner = await storage.getCleaner(offer.cleanerId);
+      enriched.push({ ...offer, cleanerName: cleaner?.name || "Unknown", cleanerRating: cleaner?.rating });
+    }
+    res.json(enriched);
+  });
+
   // === CLEANER AVAILABILITY ===
   app.get("/api/cleaner-availability/:cleanerId", async (req, res) => {
     const availability = await storage.getCleanerAvailability(req.params.cleanerId);
@@ -494,6 +553,54 @@ export async function registerRoutes(
       res.json(updated);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === CONTRACTOR OFFER ROUTES ===
+  app.get("/api/contractor/offers", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const contractor = await isContractor(req);
+    if (!contractor) return res.status(403).json({ message: "Contractor only" });
+    const cleaner = await storage.getCleanerByUserId(userId);
+    if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+    const offers = await storage.getJobOffersByCleanerId(cleaner.id);
+    const enrichedOffers = [];
+    for (const offer of offers) {
+      const request = await storage.getServiceRequest(offer.serviceRequestId);
+      enrichedOffers.push({ ...offer, serviceRequest: request });
+    }
+    res.json(enrichedOffers);
+  });
+
+  app.post("/api/contractor/offers/:id/accept", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const contractor = await isContractor(req);
+      if (!contractor) return res.status(403).json({ message: "Contractor only" });
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+
+      const result = await acceptJobOffer(req.params.id, cleaner.id);
+      if (!result.success) return res.status(400).json({ message: result.message });
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/contractor/offers/:id/decline", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const contractor = await isContractor(req);
+      if (!contractor) return res.status(403).json({ message: "Contractor only" });
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+
+      const result = await declineJobOffer(req.params.id, cleaner.id);
+      if (!result.success) return res.status(400).json({ message: result.message });
+      res.json(result);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
     }
   });
 

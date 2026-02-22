@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -11,6 +11,7 @@ import {
   type ServiceRequest, type InsertServiceRequest,
   type CleanerAvailability, type InsertCleanerAvailability,
   type Notification, type InsertNotification,
+  type JobOffer, type InsertJobOffer,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -58,6 +59,14 @@ export interface IStorage {
   createNotification(data: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string, userId: string): Promise<Notification | undefined>;
   markAllNotificationsRead(userId: string): Promise<void>;
+
+  getJobOffersByServiceRequest(serviceRequestId: string): Promise<JobOffer[]>;
+  getJobOffersByCleanerId(cleanerId: string): Promise<JobOffer[]>;
+  getJobOffer(id: string): Promise<JobOffer | undefined>;
+  createJobOffer(data: InsertJobOffer): Promise<JobOffer>;
+  updateJobOffer(id: string, data: Partial<JobOffer>): Promise<JobOffer | undefined>;
+
+  getReviewsByCleanerId(cleanerId: string): Promise<Review[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -233,6 +242,33 @@ export class DatabaseStorage implements IStorage {
     await db.update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  async getJobOffersByServiceRequest(serviceRequestId: string): Promise<JobOffer[]> {
+    return db.select().from(jobOffers).where(eq(jobOffers.serviceRequestId, serviceRequestId));
+  }
+
+  async getJobOffersByCleanerId(cleanerId: string): Promise<JobOffer[]> {
+    return db.select().from(jobOffers).where(eq(jobOffers.cleanerId, cleanerId));
+  }
+
+  async getJobOffer(id: string): Promise<JobOffer | undefined> {
+    const [offer] = await db.select().from(jobOffers).where(eq(jobOffers.id, id));
+    return offer;
+  }
+
+  async createJobOffer(data: InsertJobOffer): Promise<JobOffer> {
+    const [offer] = await db.insert(jobOffers).values(data).returning();
+    return offer;
+  }
+
+  async updateJobOffer(id: string, data: Partial<JobOffer>): Promise<JobOffer | undefined> {
+    const [offer] = await db.update(jobOffers).set(data).where(eq(jobOffers.id, id)).returning();
+    return offer;
+  }
+
+  async getReviewsByCleanerId(cleanerId: string): Promise<Review[]> {
+    return db.select().from(reviews).where(eq(reviews.cleanerId, cleanerId));
   }
 }
 

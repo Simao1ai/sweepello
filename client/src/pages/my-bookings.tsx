@@ -9,6 +9,7 @@ import type { ServiceRequest } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+  broadcasting: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
   confirmed: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   in_progress: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   completed: "bg-green-500/10 text-green-700 dark:text-green-400",
@@ -16,9 +17,10 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "Pending Review",
-  confirmed: "Confirmed",
-  in_progress: "In Progress",
+  pending: "Finding Cleaners",
+  broadcasting: "Matching in Progress",
+  confirmed: "Cleaner Assigned",
+  in_progress: "Cleaning in Progress",
   completed: "Completed",
   cancelled: "Cancelled",
 };
