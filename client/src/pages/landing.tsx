@@ -11,6 +11,10 @@ import {
   Building2,
   Hotel,
   CheckCircle,
+  Users,
+  HardHat,
+  LayoutDashboard,
+  LogIn,
 } from "lucide-react";
 import heroImage from "../assets/images/hero-clean.png";
 
@@ -29,9 +33,10 @@ export default function Landing() {
             <a href="#services" className="hover:text-foreground transition-colors">Services</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
+            <a href="#portals" className="hover:text-foreground transition-colors">Login</a>
           </div>
           <a href="/api/login" data-testid="button-login-nav">
-            <Button>Get Started</Button>
+            <Button className="gap-2"><LogIn className="h-4 w-4" /> Sign In</Button>
           </a>
         </div>
       </nav>
@@ -227,6 +232,68 @@ export default function Landing() {
             </a>
             <p className="mt-3 text-xs text-muted-foreground">No credit card required</p>
           </div>
+        </div>
+      </section>
+
+      <section id="portals" className="py-16 md:py-24">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-serif font-bold">Log In to Your Portal</h2>
+            <p className="mt-3 text-muted-foreground">One account, three experiences — sign in and you'll be directed to your dashboard</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <a href="/api/login" data-testid="portal-client">
+              <Card className="bg-background hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer border-2 h-full">
+                <CardContent className="pt-8 pb-6 text-center space-y-4">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Users className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-xl">Client Portal</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Request cleaning services, track your bookings, view quotes, and rate your cleaners.
+                  </p>
+                  <Button variant="outline" className="gap-2 w-full">
+                    <LogIn className="h-4 w-4" /> Sign In as Client
+                  </Button>
+                </CardContent>
+              </Card>
+            </a>
+            <a href="/api/login" data-testid="portal-contractor">
+              <Card className="bg-background hover:shadow-lg hover:border-emerald-500/40 transition-all cursor-pointer border-2 h-full">
+                <CardContent className="pt-8 pb-6 text-center space-y-4">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+                    <HardHat className="h-8 w-8 text-emerald-600" />
+                  </div>
+                  <h3 className="font-semibold text-xl">Contractor Portal</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    View and accept job offers, manage your availability, update job progress, and get paid.
+                  </p>
+                  <Button variant="outline" className="gap-2 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950">
+                    <LogIn className="h-4 w-4" /> Sign In as Contractor
+                  </Button>
+                </CardContent>
+              </Card>
+            </a>
+            <a href="/api/login" data-testid="portal-admin">
+              <Card className="bg-background hover:shadow-lg hover:border-blue-500/40 transition-all cursor-pointer border-2 h-full">
+                <CardContent className="pt-8 pb-6 text-center space-y-4">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/10">
+                    <LayoutDashboard className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-xl">Admin Portal</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Manage dispatch, track jobs and payments, view analytics, and oversee cleaner performance.
+                  </p>
+                  <Button variant="outline" className="gap-2 w-full border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950">
+                    <LogIn className="h-4 w-4" /> Sign In as Admin
+                  </Button>
+                </CardContent>
+              </Card>
+            </a>
+          </div>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            All portals use the same sign-in. Your role determines which dashboard you see.
+          </p>
         </div>
       </section>
 
