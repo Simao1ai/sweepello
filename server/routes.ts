@@ -1,7 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertClientSchema, insertCleanerSchema, insertJobSchema, insertPaymentSchema, insertReviewSchema } from "@shared/schema";
+import { isAuthenticated } from "./replit_integrations/auth";
+import {
+  insertClientSchema, insertCleanerSchema, insertJobSchema,
+  insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
+  insertCleanerAvailabilitySchema, insertUserProfileSchema,
+} from "@shared/schema";
 import { ZodError } from "zod";
 
 function handleZodError(err: unknown) {
@@ -11,14 +16,157 @@ function handleZodError(err: unknown) {
   return (err as Error).message;
 }
 
+function getUserId(req: any): string {
+  return req.user?.claims?.sub;
+}
+
+async function isAdmin(req: any): Promise<boolean> {
+  const userId = getUserId(req);
+  if (!userId) return false;
+  const profile = await storage.getUserProfile(userId);
+  return profile?.role === "admin";
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
+  // === USER PROFILE ROUTES ===
+  app.get("/api/profile", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    res.json(profile || null);
+  });
+
+  app.post("/api/profile", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const existing = await storage.getUserProfile(userId);
+      const { role: _ignoredRole, ...safeBody } = req.body;
+      if (existing) {
+        const updated = await storage.updateUserProfile(userId, safeBody);
+        return res.json(updated);
+      }
+      const validated = insertUserProfileSchema.parse({ ...safeBody, userId, role: "client" });
+      const profile = await storage.createUserProfile(validated);
+      res.json(profile);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === CLIENT PORTAL ROUTES ===
+  app.post("/api/service-requests", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const validated = insertServiceRequestSchema.parse({ ...req.body, userId });
+      const request = await storage.createServiceRequest(validated);
+
+      const bedrooms = request.bedrooms || 2;
+      const basePrice = 100 + (bedrooms * 25);
+      const updated = await storage.updateServiceRequest(request.id, { estimatedPrice: String(basePrice) });
+
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  app.get("/api/service-requests/mine", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const requests = await storage.getServiceRequestsByUserId(userId);
+    res.json(requests);
+  });
+
+  app.get("/api/service-requests/:id", isAuthenticated, async (req, res) => {
+    const request = await storage.getServiceRequest(req.params.id);
+    if (!request) return res.status(404).json({ message: "Not found" });
+    const userId = getUserId(req);
+    const admin = await isAdmin(req);
+    if (request.userId !== userId && !admin) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    res.json(request);
+  });
+
+  app.post("/api/service-requests/:id/rate", isAuthenticated, async (req, res) => {
+    try {
+      const request = await storage.getServiceRequest(req.params.id);
+      if (!request) return res.status(404).json({ message: "Not found" });
+      const userId = getUserId(req);
+      if (request.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+      if (request.status !== "completed") return res.status(400).json({ message: "Can only rate completed services" });
+      if (!request.jobId) return res.status(400).json({ message: "No job associated" });
+
+      const existingReview = await storage.getReviewByJobId(request.jobId);
+      if (existingReview) return res.status(400).json({ message: "Already rated" });
+
+      const job = await storage.getJob(request.jobId);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+
+      const review = await storage.createReview({
+        jobId: request.jobId,
+        clientId: job.clientId,
+        cleanerId: job.cleanerId || "",
+        userId,
+        rating: req.body.rating,
+        comment: req.body.comment || null,
+      });
+
+      if (job.cleanerId) {
+        const allReviews = await storage.getReviews();
+        const cleanerReviews = allReviews.filter(r => r.cleanerId === job.cleanerId);
+        const avgRating = cleanerReviews.reduce((s, r) => s + r.rating, 0) / cleanerReviews.length;
+        await storage.updateCleaner(job.cleanerId, { rating: avgRating.toFixed(2) });
+      }
+
+      res.json(review);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === MATCHING ROUTE - find available cleaners by location/date ===
+  app.get("/api/available-cleaners", isAuthenticated, async (req, res) => {
+    const { zipCode, date } = req.query;
+    const allCleaners = await storage.getCleaners();
+    const activeCleaners = allCleaners.filter(c => c.status === "active");
+
+    let matched = activeCleaners;
+    if (zipCode) {
+      matched = matched.filter(c => {
+        if (!c.zipCodes) return true;
+        return c.zipCodes.split(",").map(z => z.trim()).includes(String(zipCode));
+      });
+    }
+
+    if (date) {
+      const requestedDate = new Date(String(date));
+      const dayOfWeek = requestedDate.getDay();
+
+      const availableCleanerIds: string[] = [];
+      for (const cleaner of matched) {
+        const availability = await storage.getCleanerAvailability(cleaner.id);
+        if (availability.length === 0) {
+          availableCleanerIds.push(cleaner.id);
+          continue;
+        }
+        const dayAvail = availability.find(a => a.dayOfWeek === dayOfWeek);
+        if (dayAvail && dayAvail.isAvailable) {
+          availableCleanerIds.push(cleaner.id);
+        }
+      }
+      matched = matched.filter(c => availableCleanerIds.includes(c.id));
+    }
+
+    res.json(matched);
+  });
+
+  // === ADMIN ROUTES ===
   app.get("/api/clients", async (_req, res) => {
-    const clients = await storage.getClients();
-    res.json(clients);
+    const allClients = await storage.getClients();
+    res.json(allClients);
   });
 
   app.post("/api/clients", async (req, res) => {
@@ -32,8 +180,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/cleaners", async (_req, res) => {
-    const cleaners = await storage.getCleaners();
-    res.json(cleaners);
+    const allCleaners = await storage.getCleaners();
+    res.json(allCleaners);
   });
 
   app.post("/api/cleaners", async (req, res) => {
@@ -47,8 +195,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/jobs", async (_req, res) => {
-    const jobs = await storage.getJobs();
-    res.json(jobs);
+    const allJobs = await storage.getJobs();
+    res.json(allJobs);
   });
 
   app.post("/api/jobs", async (req, res) => {
@@ -96,6 +244,10 @@ export async function registerRoutes(
             totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.price)).toFixed(2),
           });
         }
+
+        if (job.serviceRequestId) {
+          await storage.updateServiceRequest(job.serviceRequestId, { status: "completed" });
+        }
       }
 
       res.json(job);
@@ -105,13 +257,13 @@ export async function registerRoutes(
   });
 
   app.get("/api/payments", async (_req, res) => {
-    const payments = await storage.getPayments();
-    res.json(payments);
+    const allPayments = await storage.getPayments();
+    res.json(allPayments);
   });
 
   app.get("/api/reviews", async (_req, res) => {
-    const reviews = await storage.getReviews();
-    res.json(reviews);
+    const allReviews = await storage.getReviews();
+    res.json(allReviews);
   });
 
   app.post("/api/reviews", async (req, res) => {
@@ -124,6 +276,117 @@ export async function registerRoutes(
     }
   });
 
+  // === SERVICE REQUESTS ADMIN ===
+  app.get("/api/service-requests", isAuthenticated, async (req, res) => {
+    const admin = await isAdmin(req);
+    if (!admin) return res.status(403).json({ message: "Admin only" });
+    const requests = await storage.getServiceRequests();
+    res.json(requests);
+  });
+
+  app.patch("/api/service-requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const admin = await isAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Admin only" });
+
+      const request = await storage.getServiceRequest(req.params.id);
+      if (!request) return res.status(404).json({ message: "Not found" });
+
+      if (req.body.assignedCleanerId && req.body.status === "confirmed") {
+        const cleaner = await storage.getCleaner(req.body.assignedCleanerId);
+        if (!cleaner) return res.status(400).json({ message: "Cleaner not found" });
+
+        let client = await storage.getClientByUserId(request.userId);
+        if (!client) {
+          client = await storage.createClient({
+            name: "Client",
+            email: null,
+            phone: null,
+            propertyAddress: request.propertyAddress,
+            propertyType: request.propertyType,
+            userId: request.userId,
+            city: request.city,
+            zipCode: request.zipCode,
+            bedrooms: request.bedrooms,
+            bathrooms: request.bathrooms,
+            notes: null,
+          });
+        }
+
+        const job = await storage.createJob({
+          clientId: client.id,
+          cleanerId: req.body.assignedCleanerId,
+          propertyAddress: request.propertyAddress,
+          scheduledDate: request.requestedDate,
+          status: "assigned",
+          price: request.estimatedPrice || "150.00",
+          cleanerPay: String(cleaner.payRate),
+          serviceRequestId: request.id,
+          notes: request.specialInstructions,
+        });
+
+        await storage.createPayment({
+          jobId: job.id,
+          cleanerId: job.cleanerId,
+          amount: job.price,
+          type: "incoming",
+          status: "pending",
+          paidAt: null,
+        });
+        await storage.createPayment({
+          jobId: job.id,
+          cleanerId: job.cleanerId,
+          amount: job.cleanerPay!,
+          type: "outgoing",
+          status: "pending",
+          paidAt: null,
+        });
+
+        const updated = await storage.updateServiceRequest(request.id, {
+          status: "confirmed",
+          assignedCleanerId: req.body.assignedCleanerId,
+          jobId: job.id,
+        });
+        return res.json(updated);
+      }
+
+      const updated = await storage.updateServiceRequest(req.params.id, req.body);
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === CLEANER AVAILABILITY ===
+  app.get("/api/cleaner-availability/:cleanerId", async (req, res) => {
+    const availability = await storage.getCleanerAvailability(req.params.cleanerId);
+    res.json(availability);
+  });
+
+  app.post("/api/cleaner-availability/:cleanerId", isAuthenticated, async (req, res) => {
+    try {
+      const admin = await isAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Admin only" });
+
+      await storage.deleteCleanerAvailability(req.params.cleanerId);
+
+      const slots = req.body.slots || [];
+      const results = [];
+      for (const slot of slots) {
+        const validated = insertCleanerAvailabilitySchema.parse({
+          cleanerId: req.params.cleanerId,
+          ...slot,
+        });
+        const avail = await storage.setCleanerAvailability(validated);
+        results.push(avail);
+      }
+      res.json(results);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === DASHBOARD STATS ===
   app.get("/api/dashboard/stats", async (_req, res) => {
     const [allJobs, allCleaners, allPayments] = await Promise.all([
       storage.getJobs(),
@@ -152,6 +415,30 @@ export async function registerRoutes(
       pendingPayments,
       activeCleaners: activeCleaners.length,
     });
+  });
+
+  // === CALENDAR DATA ===
+  app.get("/api/calendar", async (req, res) => {
+    const [allJobs, allCleaners] = await Promise.all([
+      storage.getJobs(),
+      storage.getCleaners(),
+    ]);
+
+    const events = allJobs.map(job => {
+      const cleaner = allCleaners.find(c => c.id === job.cleanerId);
+      return {
+        id: job.id,
+        title: cleaner ? cleaner.name : "Unassigned",
+        start: job.scheduledDate,
+        address: job.propertyAddress,
+        status: job.status,
+        cleanerName: cleaner?.name || "Unassigned",
+        cleanerId: job.cleanerId,
+        price: job.price,
+      };
+    });
+
+    res.json(events);
   });
 
   return httpServer;
