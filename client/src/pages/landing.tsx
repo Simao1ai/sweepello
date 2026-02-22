@@ -6,8 +6,11 @@ import {
   Calendar,
   Star,
   Shield,
-  Clock,
   ArrowRight,
+  Home,
+  Building2,
+  Hotel,
+  CheckCircle,
 } from "lucide-react";
 import heroImage from "../assets/images/hero-clean.png";
 
@@ -23,6 +26,7 @@ export default function Landing() {
             <span className="text-lg font-semibold tracking-tight">CleanSlate</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+            <a href="#services" className="hover:text-foreground transition-colors">Services</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
           </div>
@@ -38,16 +42,16 @@ export default function Landing() {
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
-                Serving the NJ Shore
+                Serving All of New Jersey
               </div>
               <h1 className="text-4xl font-serif font-bold tracking-tight md:text-5xl lg:text-6xl">
-                Sparkling Clean{" "}
-                <span className="text-primary">Vacation Rentals</span>,
-                Every Time
+                Professional{" "}
+                <span className="text-primary">Cleaning Services</span>{" "}
+                You Can Trust
               </h1>
               <p className="text-lg text-muted-foreground max-w-md">
-                Professional Airbnb turnover cleaning for the NJ Shore market. 
-                Book trusted cleaners, track your service, and rate your experience — all in one place.
+                Residential, commercial, and vacation rental cleaning across New Jersey. 
+                Book vetted professionals, get instant quotes, and enjoy spotless spaces — every time.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a href="/api/login" data-testid="button-get-started">
@@ -59,7 +63,7 @@ export default function Landing() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Shield className="h-4 w-4 text-primary" />
-                  <span>Vetted Cleaners</span>
+                  <span>Insured & Vetted</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-primary" />
@@ -70,7 +74,7 @@ export default function Landing() {
             <div className="relative">
               <img
                 src={heroImage}
-                alt="Clean vacation rental"
+                alt="Professional cleaning service"
                 className="rounded-xl ring-1 ring-black/5 shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
                 data-testid="img-hero"
               />
@@ -89,14 +93,76 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="features" className="py-16 md:py-24 bg-muted/30">
+      <section id="services" className="py-16 md:py-24 bg-muted/30">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-serif font-bold">Our Services</h2>
+            <p className="mt-3 text-muted-foreground">Cleaning solutions for every property type</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-residential">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
+              <CardContent className="pt-8 space-y-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+                  <Home className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold text-xl">Residential</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Keep your home spotless with regular maintenance, deep cleans, or move-out services. Perfect for homeowners and renters across NJ.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Standard & deep cleaning</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Move-out / move-in prep</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Basements & large homes</li>
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-commercial">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+              <CardContent className="pt-8 space-y-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-500/10">
+                  <Building2 className="h-7 w-7 text-blue-500" />
+                </div>
+                <h3 className="font-semibold text-xl">Commercial</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Professional cleaning for offices, retail spaces, and commercial properties. Reliable teams that work around your business schedule.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> Office & retail cleaning</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> After-hours availability</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> Recurring schedules</li>
+                </ul>
+              </CardContent>
+            </Card>
+            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-rental">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+              <CardContent className="pt-8 space-y-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500/10">
+                  <Hotel className="h-7 w-7 text-amber-500" />
+                </div>
+                <h3 className="font-semibold text-xl">Vacation Rentals</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Fast turnovers for Airbnb, VRBO, and short-term rentals. Guest-ready properties between every booking at the Jersey Shore and beyond.
+                </p>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Quick turnovers</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Linen & restocking</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Photo-ready finish</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-serif font-bold">Why Choose CleanSlate?</h2>
-            <p className="mt-3 text-muted-foreground">Professional cleaning made simple</p>
+            <p className="mt-3 text-muted-foreground">Built for reliability, transparency, and quality</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-background/50 hover:bg-background transition-colors border-0 shadow-sm">
+            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
               <CardContent className="pt-6 text-center space-y-3">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <MapPin className="h-6 w-6 text-primary" />
@@ -107,18 +173,18 @@ export default function Landing() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-background/50 hover:bg-background transition-colors border-0 shadow-sm">
+            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
               <CardContent className="pt-6 text-center space-y-3">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <Calendar className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="font-semibold text-lg">Easy Scheduling</h3>
+                <h3 className="font-semibold text-lg">Instant Quotes</h3>
                 <p className="text-sm text-muted-foreground">
-                  Pick your date and time, and we'll find the perfect cleaner available for your property.
+                  Get a transparent price estimate based on your property size and service type — no surprises.
                 </p>
               </CardContent>
             </Card>
-            <Card className="bg-background/50 hover:bg-background transition-colors border-0 shadow-sm">
+            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
               <CardContent className="pt-6 text-center space-y-3">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <Star className="h-6 w-6 text-primary" />
@@ -133,7 +199,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-16 md:py-24">
+      <section id="how-it-works" className="py-16 md:py-24 bg-muted/30">
         <div className="mx-auto max-w-6xl px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-serif font-bold">How It Works</h2>
@@ -141,8 +207,8 @@ export default function Landing() {
           <div className="grid gap-8 md:grid-cols-3">
             {[
               { step: "1", title: "Create Your Account", desc: "Sign up in seconds with your Google, GitHub, or email." },
-              { step: "2", title: "Request a Cleaning", desc: "Enter your property details, pick a date, and submit your request." },
-              { step: "3", title: "Sit Back & Rate", desc: "We match you with a local cleaner. After the job, leave a review." },
+              { step: "2", title: "Request a Cleaning", desc: "Tell us your property details, choose a service type, and pick a date." },
+              { step: "3", title: "Sit Back & Rate", desc: "We match you with a top-rated local cleaner. After the job, leave a review." },
             ].map(item => (
               <div key={item.step} className="text-center space-y-3">
                 <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
