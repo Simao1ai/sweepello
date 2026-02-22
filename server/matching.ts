@@ -7,19 +7,82 @@ export interface MatchedCleaner {
   isPreferred: boolean;
 }
 
-const PRICING_TIERS: Record<string, { base: number; perBedroom: number; perBathroom: number }> = {
-  residential: { base: 80, perBedroom: 20, perBathroom: 15 },
-  commercial: { base: 150, perBedroom: 30, perBathroom: 25 },
-  airbnb: { base: 100, perBedroom: 25, perBathroom: 20 },
+const SUB_RATES: Record<string, number> = {
+  standard: 0.10,
+  deep: 0.14,
+  "move-out": 0.18,
 };
 
-export function calculatePrice(propertyType: string, bedrooms: number, bathrooms: number, squareFootage?: number): number {
-  const tier = PRICING_TIERS[propertyType] || PRICING_TIERS.airbnb;
-  let price = tier.base + (bedrooms * tier.perBedroom) + (bathrooms * tier.perBathroom);
-  if (squareFootage && squareFootage > 2000) {
-    price += Math.floor((squareFootage - 2000) / 500) * 25;
-  }
-  return price;
+const MARKET_FLOORS: Record<string, number> = {
+  standard: 0.14,
+  deep: 0.20,
+  "move-out": 0.24,
+};
+
+const TARGET_MARGIN = 0.30;
+const MINIMUM_PRICE = 120;
+
+export interface PricingBreakdown {
+  subcontractorCost: number;
+  clientPrice: number;
+  platformFee: number;
+  marginPercent: number;
+}
+
+export function calculateBrokeragePrice(
+  serviceType: string,
+  bedrooms: number,
+  bathrooms: number,
+  squareFootage: number,
+  basement: boolean = false
+): PricingBreakdown {
+  const subRate = SUB_RATES[serviceType] || SUB_RATES.standard;
+  const marketFloor = MARKET_FLOORS[serviceType] || MARKET_FLOORS.standard;
+
+  const sqft = Math.max(squareFootage || 1000, 500);
+
+  const subBase = sqft * subRate;
+  const subBedAdj = Math.max(0, bedrooms - 2) * 8;
+  const subBathAdj = Math.max(0, bathrooms - 1) * 20;
+  const subBasementAdj = basement ? Math.max(40, 0.02 * sqft) : 0;
+
+  const subTotal = subBase + subBedAdj + subBathAdj + subBasementAdj;
+
+  let clientPrice = subTotal / (1 - TARGET_MARGIN);
+
+  const marketFloorPrice = sqft * marketFloor;
+  clientPrice = Math.max(clientPrice, marketFloorPrice);
+
+  clientPrice = Math.max(clientPrice, MINIMUM_PRICE);
+
+  clientPrice = Math.round(clientPrice / 5) * 5;
+
+  const platformFee = clientPrice - subTotal;
+  const marginPercent = (platformFee / clientPrice) * 100;
+
+  return {
+    subcontractorCost: Math.round(subTotal * 100) / 100,
+    clientPrice,
+    platformFee: Math.round(platformFee * 100) / 100,
+    marginPercent: Math.round(marginPercent * 10) / 10,
+  };
+}
+
+export function calculatePrice(
+  serviceType: string,
+  bedrooms: number,
+  bathrooms: number,
+  squareFootage?: number,
+  basement?: boolean
+): number {
+  const result = calculateBrokeragePrice(
+    serviceType,
+    bedrooms,
+    bathrooms,
+    squareFootage || 1000,
+    basement || false
+  );
+  return result.clientPrice;
 }
 
 export async function findMatchingCleaners(request: ServiceRequest): Promise<MatchedCleaner[]> {
@@ -112,7 +175,7 @@ export async function broadcastJobOffers(serviceRequestId: string): Promise<{ of
       await storage.createNotification({
         userId: match.cleaner.userId,
         title: isPreferred ? "Priority Job Offer - Preferred Client" : "New Job Available",
-        message: `${isPreferred ? "A client has requested you! " : ""}Cleaning at ${request.propertyAddress} on ${scheduledDate}. ${request.propertyType} - ${request.bedrooms || 2}BR/${request.bathrooms || 1}BA. Est. $${Number(request.estimatedPrice || 0).toFixed(0)}.`,
+        message: `${isPreferred ? "A client has requested you! " : ""}${(request.serviceType || "standard").charAt(0).toUpperCase() + (request.serviceType || "standard").slice(1)} clean at ${request.propertyAddress} on ${scheduledDate}. ${request.bedrooms || 2}BR/${request.bathrooms || 1}BA${request.squareFootage ? `, ${request.squareFootage} sqft` : ""}. Est. $${Number(request.estimatedPrice || 0).toFixed(0)}.`,
         type: "job_offer",
         serviceRequestId,
         jobOfferId: offer.id,
@@ -177,14 +240,17 @@ export async function acceptJobOffer(offerId: string, cleanerId: string): Promis
     });
   }
 
+  const clientPrice = request.estimatedPrice || "150.00";
+  const subCost = request.subcontractorCost || String(Math.round(Number(clientPrice) * 0.70));
+
   const job = await storage.createJob({
     clientId: client.id,
     cleanerId,
     propertyAddress: request.propertyAddress,
     scheduledDate: request.requestedDate,
     status: "assigned",
-    price: request.estimatedPrice || "150.00",
-    cleanerPay: String(cleaner.payRate),
+    price: clientPrice,
+    cleanerPay: subCost,
     serviceRequestId: request.id,
     notes: request.specialInstructions,
   });

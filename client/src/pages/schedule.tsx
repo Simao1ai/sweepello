@@ -290,7 +290,7 @@ export default function Schedule() {
                 <div className="flex items-center gap-2">
                   <Home className="h-4 w-4 text-muted-foreground" />
                   <Badge variant="secondary" className="text-xs capitalize">
-                    {selectedRequest.propertyType}
+                    {selectedRequest.serviceType || selectedRequest.propertyType}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {selectedRequest.bedrooms}BR / {selectedRequest.bathrooms}BA

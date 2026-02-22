@@ -63,13 +63,16 @@ export const serviceRequests = pgTable("service_requests", {
   city: text("city"),
   zipCode: text("zip_code"),
   propertyType: text("property_type").notNull().default("airbnb"),
+  serviceType: text("service_type").notNull().default("standard"),
   bedrooms: integer("bedrooms"),
   bathrooms: integer("bathrooms"),
+  basement: boolean("basement").default(false),
   requestedDate: timestamp("requested_date").notNull(),
   preferredTime: text("preferred_time"),
   specialInstructions: text("special_instructions"),
   status: text("status").notNull().default("pending"),
   estimatedPrice: decimal("estimated_price", { precision: 10, scale: 2 }),
+  subcontractorCost: decimal("subcontractor_cost", { precision: 10, scale: 2 }),
   assignedCleanerId: varchar("assigned_cleaner_id"),
   preferredCleanerId: varchar("preferred_cleaner_id"),
   jobId: varchar("job_id"),
@@ -142,7 +145,7 @@ export const insertCleanerSchema = createInsertSchema(cleaners).omit({ id: true,
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, profit: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
-export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true });
+export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true, subcontractorCost: true });
 export const insertCleanerAvailabilitySchema = createInsertSchema(cleanerAvailability).omit({ id: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
 export const insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, offeredAt: true, respondedAt: true });

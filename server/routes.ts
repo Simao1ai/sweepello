@@ -8,7 +8,7 @@ import {
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
-import { calculatePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
+import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -73,9 +73,14 @@ export async function registerRoutes(
 
       const bedrooms = request.bedrooms || 2;
       const bathrooms = request.bathrooms || 1;
-      const propertyType = request.propertyType || "airbnb";
-      const price = calculatePrice(propertyType, bedrooms, bathrooms, request.squareFootage || undefined);
-      const updated = await storage.updateServiceRequest(request.id, { estimatedPrice: String(price) });
+      const serviceType = request.serviceType || "standard";
+      const sqft = request.squareFootage || 1000;
+      const basement = request.basement || false;
+      const pricing = calculateBrokeragePrice(serviceType, bedrooms, bathrooms, sqft, basement);
+      const updated = await storage.updateServiceRequest(request.id, {
+        estimatedPrice: String(pricing.clientPrice),
+        subcontractorCost: String(pricing.subcontractorCost),
+      });
 
       try {
         await broadcastJobOffers(updated!.id);
@@ -90,14 +95,20 @@ export async function registerRoutes(
   });
 
   app.get("/api/pricing-estimate", async (req, res) => {
-    const { propertyType, bedrooms, bathrooms, squareFootage } = req.query;
-    const price = calculatePrice(
-      String(propertyType || "airbnb"),
+    const { serviceType, bedrooms, bathrooms, squareFootage, basement } = req.query;
+    const pricing = calculateBrokeragePrice(
+      String(serviceType || "standard"),
       Number(bedrooms || 2),
       Number(bathrooms || 1),
-      squareFootage ? Number(squareFootage) : undefined
+      Number(squareFootage || 1000),
+      basement === "true"
     );
-    res.json({ estimatedPrice: price });
+    res.json({
+      estimatedPrice: pricing.clientPrice,
+      subcontractorCost: pricing.subcontractorCost,
+      platformFee: pricing.platformFee,
+      marginPercent: pricing.marginPercent,
+    });
   });
 
   app.get("/api/client/previous-cleaners", isAuthenticated, async (req, res) => {

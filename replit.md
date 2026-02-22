@@ -69,7 +69,10 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Preferred cleaner gets rank 0 (first offer) if available
 - Creates jobOffers with 30-min expiry, sends notifications to contractor userId
 - First to accept gets the job; others auto-expire
-- Pricing tiers: residential ($80 base), commercial ($150 base), Airbnb ($100 base) + per bedroom/bathroom
+- Brokerage pricing model: sub_cost = sqft * rate + bedroom/bath/basement adjustments
+- Client price = sub_cost / (1 - 30% margin), market floor protection, $120 minimum, rounded to $5
+- Service types: standard ($0.10/sqft sub), deep ($0.14/sqft sub), move-out ($0.18/sqft sub)
+- Sub adjustments: +$8/bedroom over 2, +$20/bathroom over 1, basement = max($40, 0.02*sqft)
 
 ## Authentication & Routing
 - Unauthenticated users see the Landing page

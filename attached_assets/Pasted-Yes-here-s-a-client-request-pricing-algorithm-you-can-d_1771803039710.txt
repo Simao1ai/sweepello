@@ -1,0 +1,93 @@
+Yes — here’s a client-request pricing algorithm you can drop into your form that uses sq ft + beds + baths + basement, and it’s grounded in current market ranges.
+
+What the market is charging (to anchor your numbers)
+	•	Per square foot (standard cleaning): commonly $0.10–$0.20/sq ft; deep clean can run higher.  ￼
+	•	Hourly rates: platforms commonly show ~$40–$55/hr averages, and NJ local pages often show higher “per cleaner” numbers depending on service level.  ￼
+	•	Local “starting” hourly in Summit, NJ: around the high-$20s/hr as a baseline (often not fully-loaded insured company pricing, but useful for calibration).  ￼
+
+Because your form is quote-first (not time-based), the cleanest approach is a flat-price formula using those ranges.
+
+⸻
+
+Pricing algorithm (recommended)
+
+Step 1) Pick a base $/sqft by service level
+
+Use these as defaults (you can tweak after 20–30 jobs):
+	•	Standard: rate = 0.12
+	•	Deep: rate = 0.18
+	•	Move-out / turnover: rate = 0.22
+
+These sit inside the commonly published ranges.  ￼
+
+Step 2) Add “complexity” for bathrooms + extra bedrooms
+
+Sq ft captures floors/surfaces, but bathrooms drive time. So add fixed bumps:
+	•	bed_add = $12 for each bedroom over 2
+	•	bath_add = $28 for each bathroom over 1
+
+(These are intentionally heavier on baths.)
+
+Step 3) Basement toggle
+
+Since your form just has include basement: yes/no (no basement sq ft), use a hybrid:
+	•	basement_add = max($50, 0.03 * sqft_main) if basement = yes
+(So bigger homes pay a bit more, but you still have a minimum.)
+
+Step 4) Minimum price + rounding
+	•	minimum = $120 (or whatever your “truck roll” minimum is)
+	•	Round to nearest $5
+
+⸻
+
+Final formula (drop-in)
+
+Let:
+	•	S = sqft
+	•	B = bedrooms
+	•	Ba = bathrooms
+	•	Basement = TRUE/FALSE
+	•	rate = {0.12, 0.18, 0.22} based on service type
+
+Quote:
+
+base = S * rate
+bedroom_adj = max(0, B - 2) * 12
+bath_adj = max(0, Ba - 1) * 28
+basement_adj = Basement ? max(50, 0.03 * S) : 0
+
+total = base + bedroom_adj + bath_adj + basement_adj
+total = max(120, total)
+total = round(total / 5) * 5
+
+
+⸻
+
+Example (so you can sanity-check)
+
+2,000 sq ft, 3 bed, 2 bath, basement included, standard
+	•	base = 2000 * 0.12 = 240
+	•	bed adj = (3-2)*12 = 12
+	•	bath adj = (2-1)*28 = 28
+	•	basement adj = max(50, 0.03*2000=60) = 60
+Total = 240 + 12 + 28 + 60 = $340 → rounds to $340
+
+That sits in the typical band you see for a 2,000 sq ft home depending on depth and market.  ￼
+
+⸻
+
+How to “self-correct” the algorithm (so it learns your real costs)
+
+After each completed job, store:
+	•	sqft, beds, baths, basement Y/N, service type
+	•	actual labor hours
+	•	actual margin (price – labor – supplies)
+
+Then every ~25 jobs, adjust:
+	•	If average margin too low → raise rate by $0.01–$0.02
+	•	If bathrooms consistently run long → raise bath_add by $3–$5
+	•	If basement jobs are always underestimated → raise basement minimum from $50 → $65
+
+⸻
+
+If you tell me your target market area (ex: Summit/Union County vs statewide NJ) and whether you’re positioning as premium insured team vs independent cleaner marketplace, I’ll tighten the default numbers (rate/bed/bath/basement/minimum) to match that positioning.

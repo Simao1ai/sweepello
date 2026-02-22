@@ -1,0 +1,197 @@
+Perfect. Now we’re talking real brokerage math.
+
+Since you’re launching statewide NJ, and you’re a cleaning brokerage, your pricing algorithm must:
+	1.	Cover subcontractor payout
+	2.	Cover your platform/ops fee
+	3.	Protect minimum margin
+	4.	Still stay competitive
+
+This means your system should calculate backwards from target margin, not just forward from sqft.
+
+⸻
+
+🔢 The Correct Brokerage Pricing Model
+
+Instead of:
+
+Client Price = Market Rate
+
+You do:
+
+Client Price = Sub Pay + Your Margin + Risk Buffer
+
+⸻
+
+STEP 1 — Define NJ Market Bands (Statewide Safe Range)
+
+For insured, professional cleaning teams in NJ:
+
+Service Type	Realistic Client Range
+Standard	$0.13 – $0.17 / sq ft
+Deep	$0.18 – $0.25 / sq ft
+Move-out	$0.22 – $0.30 / sq ft
+
+These are realistic for statewide NJ, not discount marketplace pricing.
+
+To stay competitive but profitable:
+	•	Standard target sell rate: $0.15
+	•	Deep target sell rate: $0.21
+	•	Move-out target sell rate: $0.26
+
+⸻
+
+STEP 2 — Decide Your Target Margin
+
+For brokerage model:
+	•	Healthy target: 25–35% gross margin
+	•	Absolute minimum: 20%
+	•	Premium positioning: 35–40%
+
+I recommend:
+
+30% target margin
+
+⸻
+
+STEP 3 — Build It Backwards (Subcontractor Payout Formula)
+
+If you want 30% margin:
+
+Client Price = Sub Pay / (1 - 0.30)
+Client Price = Sub Pay / 0.70
+
+So if sub needs $210:
+
+Client sees:
+
+210 / 0.70 = $300
+
+Your gross = $90 (30%)
+
+⸻
+
+🚀 FINAL SMART ALGORITHM (Brokerage Version)
+
+Variables:
+	•	S = sqft
+	•	B = bedrooms
+	•	Ba = bathrooms
+	•	Basement = true/false
+	•	service_type
+	•	target_margin = 0.30
+
+⸻
+
+1️⃣ Calculate Internal Subcontractor Cost
+
+You can negotiate subs at:
+
+Service	Sub Base Rate
+Standard	$0.10
+Deep	$0.14
+Move-out	$0.18
+
+Then add complexity:
+
+sub_base = S * sub_rate
+sub_bed_adj = max(0, B - 2) * 8
+sub_bath_adj = max(0, Ba - 1) * 20
+sub_basement_adj = Basement ? max(40, 0.02 * S) : 0
+
+sub_total = sub_base + sub_bed_adj + sub_bath_adj + sub_basement_adj
+
+
+⸻
+
+2️⃣ Convert To Client Price (Margin Protected)
+
+client_price = sub_total / (1 - target_margin)
+client_price = round(client_price / 5) * 5
+
+
+⸻
+
+Example
+
+2,000 sqft | 3 bed | 2 bath | basement | standard
+
+Sub Cost:
+
+sub_base = 2000 * 0.10 = 200
+bed_adj = 8
+bath_adj = 20
+basement = max(40, 40) = 40
+
+sub_total = 268
+
+Client Price:
+
+268 / 0.70 = 382.85 → $385
+
+Your margin:
+
+$117
+
+That’s strong and still market competitive in NJ.
+
+⸻
+
+🧠 Make It Smart (Auto Margin Protection Layer)
+
+Add a safety layer:
+
+market_floor = S * 0.14   (for standard)
+
+client_price = max(client_price, market_floor)
+
+This prevents:
+	•	Undercutting yourself in high-sqft homes
+	•	Sub contractor over-negotiation squeezing your margin
+
+⸻
+
+💡 Pro-Level Upgrade (Tiered Sub Model)
+
+You can create:
+
+Tier A Subs (High Quality)
+
+Lower margin but better reviews
+Target margin: 25%
+
+Tier B Subs
+
+Standard margin 30%
+
+Tier C Subs (Rural NJ / price sensitive)
+
+Higher margin 35%
+
+Your algorithm dynamically adjusts margin based on:
+	•	County
+	•	Sub rating
+	•	Distance
+
+⸻
+
+🏗 What This Does For You
+
+• Protects profit
+• Makes negotiation with subs mathematical
+• Keeps statewide consistency
+• Scales cleanly
+• Easy to code in your form
+
+⸻
+
+⚙️ If You Want Next
+
+I can:
+	•	Turn this into copy-paste JavaScript
+	•	Turn into Excel formula version
+	•	Or design this as a backend pricing microservice spec
+	•	Or design a Sub Contractor Negotiation Strategy Sheet
+
+You’re building this the right way — brokerage models fail when they don’t control margin mathematically.
+
+Let’s build it correctly.

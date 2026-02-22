@@ -10,13 +10,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Building2, Hotel } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck } from "lucide-react";
 
-const PROPERTY_TYPE_INFO: Record<string, { label: string; icon: typeof Home; description: string }> = {
-  residential: { label: "Residential", icon: Home, description: "Private homes and apartments" },
-  commercial: { label: "Commercial", icon: Building2, description: "Office spaces and commercial properties" },
-  airbnb: { label: "Airbnb / Vacation Rental", icon: Hotel, description: "Short-term rental turnovers" },
+const SERVICE_TYPE_INFO: Record<string, { label: string; icon: typeof Home; description: string; rate: string }> = {
+  standard: { label: "Standard Clean", icon: Sparkles, description: "Regular maintenance cleaning", rate: "$0.15/sqft" },
+  deep: { label: "Deep Clean", icon: Home, description: "Thorough top-to-bottom cleaning", rate: "$0.21/sqft" },
+  "move-out": { label: "Move-Out / Turnover", icon: Truck, description: "Complete move-out or rental turnover", rate: "$0.26/sqft" },
 };
+
+interface PricingData {
+  estimatedPrice: number;
+  subcontractorCost: number;
+  platformFee: number;
+  marginPercent: number;
+}
 
 export default function RequestService() {
   const [, navigate] = useLocation();
@@ -27,17 +35,24 @@ export default function RequestService() {
     propertyAddress: "",
     city: "",
     zipCode: "",
-    propertyType: "airbnb",
+    propertyType: "residential",
+    serviceType: "standard",
     bedrooms: 2,
     bathrooms: 1,
-    squareFootage: 0,
+    squareFootage: 1500,
+    basement: false,
     requestedDate: "",
     preferredTime: "morning",
     specialInstructions: "",
     preferredCleanerId: "",
   });
 
-  const [estimatedPrice, setEstimatedPrice] = useState(150);
+  const [pricing, setPricing] = useState<PricingData>({
+    estimatedPrice: 0,
+    subcontractorCost: 0,
+    platformFee: 0,
+    marginPercent: 0,
+  });
 
   const { data: previousCleaners } = useQuery<{ id: string; name: string; rating: string }[]>({
     queryKey: ["/api/client/previous-cleaners"],
@@ -47,17 +62,16 @@ export default function RequestService() {
     const fetchPrice = async () => {
       try {
         const res = await fetch(
-          `/api/pricing-estimate?propertyType=${formData.propertyType}&bedrooms=${formData.bedrooms}&bathrooms=${formData.bathrooms}&squareFootage=${formData.squareFootage}`
+          `/api/pricing-estimate?serviceType=${formData.serviceType}&bedrooms=${formData.bedrooms}&bathrooms=${formData.bathrooms}&squareFootage=${formData.squareFootage}&basement=${formData.basement}`
         );
         const data = await res.json();
-        setEstimatedPrice(data.estimatedPrice);
+        setPricing(data);
       } catch {
-        const base = formData.propertyType === "commercial" ? 150 : formData.propertyType === "residential" ? 80 : 100;
-        setEstimatedPrice(base + formData.bedrooms * 25 + formData.bathrooms * 20);
+        setPricing({ estimatedPrice: 150, subcontractorCost: 105, platformFee: 45, marginPercent: 30 });
       }
     };
     fetchPrice();
-  }, [formData.propertyType, formData.bedrooms, formData.bathrooms, formData.squareFootage]);
+  }, [formData.serviceType, formData.bedrooms, formData.bathrooms, formData.squareFootage, formData.basement]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -66,7 +80,6 @@ export default function RequestService() {
         requestedDate: new Date(data.requestedDate).toISOString(),
       };
       if (!data.preferredCleanerId) delete body.preferredCleanerId;
-      if (!data.squareFootage) delete body.squareFootage;
       const res = await apiRequest("POST", "/api/service-requests", body);
       return res.json();
     },
@@ -106,6 +119,36 @@ export default function RequestService() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <h3 className="font-medium flex items-center gap-2 text-sm">
+                <Sparkles className="h-4 w-4 text-primary" /> Service Type
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {Object.entries(SERVICE_TYPE_INFO).map(([key, info]) => {
+                  const Icon = info.icon;
+                  const isSelected = formData.serviceType === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, serviceType: key })}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-muted hover:border-primary/30"
+                      }`}
+                      data-testid={`button-service-${key}`}
+                    >
+                      <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      <p className="text-sm font-medium">{info.label}</p>
+                      <p className="text-xs text-muted-foreground">{info.description}</p>
+                      <Badge variant="outline" className="mt-1 text-xs">{info.rate}</Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium flex items-center gap-2 text-sm">
                 <MapPin className="h-4 w-4 text-primary" /> Property Details
               </h3>
               <div className="space-y-2">
@@ -142,77 +185,67 @@ export default function RequestService() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Property Type</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(PROPERTY_TYPE_INFO).map(([key, info]) => {
-                    const Icon = info.icon;
-                    const isSelected = formData.propertyType === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, propertyType: key })}
-                        className={`p-3 rounded-lg border-2 text-left transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/5"
-                            : "border-muted hover:border-primary/30"
-                        }`}
-                        data-testid={`button-type-${key}`}
-                      >
-                        <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                        <p className="text-sm font-medium">{info.label}</p>
-                        <p className="text-xs text-muted-foreground">{info.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bedrooms">Bedrooms</Label>
-                  <Select
-                    value={String(formData.bedrooms)}
-                    onValueChange={v => setFormData({ ...formData, bedrooms: Number(v) })}
-                  >
-                    <SelectTrigger data-testid="select-bedrooms">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6].map(n => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="bedrooms">Bedrooms</Label>
+                    <Select
+                      value={String(formData.bedrooms)}
+                      onValueChange={v => setFormData({ ...formData, bedrooms: Number(v) })}
+                    >
+                      <SelectTrigger data-testid="select-bedrooms">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bathrooms">Bathrooms</Label>
+                    <Select
+                      value={String(formData.bathrooms)}
+                      onValueChange={v => setFormData({ ...formData, bathrooms: Number(v) })}
+                    >
+                      <SelectTrigger data-testid="select-bathrooms">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4].map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="bathrooms">Bathrooms</Label>
-                  <Select
-                    value={String(formData.bathrooms)}
-                    onValueChange={v => setFormData({ ...formData, bathrooms: Number(v) })}
-                  >
-                    <SelectTrigger data-testid="select-bathrooms">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4].map(n => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sqft">Sq Ft (optional)</Label>
+                  <Label htmlFor="sqft">Square Footage</Label>
                   <Input
                     id="sqft"
                     type="number"
                     data-testid="input-sqft"
                     placeholder="1500"
+                    required
+                    min={500}
                     value={formData.squareFootage || ""}
                     onChange={e => setFormData({ ...formData, squareFootage: Number(e.target.value) || 0 })}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div>
+                  <Label htmlFor="basement" className="text-sm font-medium cursor-pointer">Include Basement</Label>
+                  <p className="text-xs text-muted-foreground">Additional cost for basement cleaning</p>
+                </div>
+                <Switch
+                  id="basement"
+                  checked={formData.basement}
+                  onCheckedChange={v => setFormData({ ...formData, basement: v })}
+                  data-testid="switch-basement"
+                />
               </div>
             </div>
 
@@ -291,25 +324,27 @@ export default function RequestService() {
 
             <Card className="bg-muted/50 border-dashed">
               <CardContent className="py-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <span className="text-sm text-muted-foreground">Estimated Price</span>
+                    <span className="text-sm text-muted-foreground">Your Quote</span>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-xs">
-                        {PROPERTY_TYPE_INFO[formData.propertyType]?.label || formData.propertyType}
+                        {SERVICE_TYPE_INFO[formData.serviceType]?.label || formData.serviceType}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {formData.bedrooms}BR / {formData.bathrooms}BA
+                        {formData.bedrooms}BR / {formData.bathrooms}BA / {formData.squareFootage || "—"} sqft
+                        {formData.basement ? " + Basement" : ""}
                       </span>
                     </div>
                   </div>
                   <span className="text-2xl font-bold text-primary" data-testid="text-estimated-price">
-                    ${estimatedPrice}
+                    ${pricing.estimatedPrice}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Final price may vary based on property condition
-                </p>
+                <div className="text-xs text-muted-foreground space-y-1 border-t pt-2">
+                  <p>Competitive NJ market rate based on your property details.</p>
+                  <p>Final price may vary based on property condition.</p>
+                </div>
               </CardContent>
             </Card>
 
