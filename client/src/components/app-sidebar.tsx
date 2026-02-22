@@ -10,6 +10,8 @@ import {
   CalendarPlus,
   ClipboardList,
   LogOut,
+  Bell,
+  Clock,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import {
@@ -43,15 +45,21 @@ const clientNavItems = [
   { title: "Request Service", url: "/request-service", icon: CalendarPlus },
 ];
 
+const contractorNavItems = [
+  { title: "My Jobs", url: "/contractor/jobs", icon: Briefcase },
+  { title: "Availability", url: "/contractor/availability", icon: Clock },
+  { title: "Notifications", url: "/contractor/notifications", icon: Bell },
+];
+
 interface AppSidebarProps {
-  role: "admin" | "client";
+  role: "admin" | "client" | "contractor";
   user?: User | null;
 }
 
 export function AppSidebar({ role, user }: AppSidebarProps) {
   const [location] = useLocation();
-  const navItems = role === "admin" ? adminNavItems : clientNavItems;
-  const groupLabel = role === "admin" ? "Management" : "Services";
+  const navItems = role === "admin" ? adminNavItems : role === "contractor" ? contractorNavItems : clientNavItems;
+  const groupLabel = role === "admin" ? "Management" : role === "contractor" ? "Contractor" : "Services";
 
   const initials = user
     ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || "U"
@@ -60,7 +68,7 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href={role === "admin" ? "/admin" : "/my-bookings"} data-testid="link-home">
+        <Link href={role === "admin" ? "/admin" : role === "contractor" ? "/contractor/jobs" : "/my-bookings"} data-testid="link-home">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
@@ -68,7 +76,7 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
             <div>
               <h2 className="text-sm font-semibold tracking-tight">CleanSlate</h2>
               <p className="text-xs text-muted-foreground">
-                {role === "admin" ? "Dispatch Platform" : "Client Portal"}
+                {role === "admin" ? "Dispatch Platform" : role === "contractor" ? "Contractor Portal" : "Client Portal"}
               </p>
             </div>
           </div>

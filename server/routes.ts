@@ -5,7 +5,7 @@ import { isAuthenticated } from "./replit_integrations/auth";
 import {
   insertClientSchema, insertCleanerSchema, insertJobSchema,
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
-  insertCleanerAvailabilitySchema, insertUserProfileSchema,
+  insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 
@@ -25,6 +25,13 @@ async function isAdmin(req: any): Promise<boolean> {
   if (!userId) return false;
   const profile = await storage.getUserProfile(userId);
   return profile?.role === "admin";
+}
+
+async function isContractor(req: any): Promise<boolean> {
+  const userId = getUserId(req);
+  if (!userId) return false;
+  const profile = await storage.getUserProfile(userId);
+  return profile?.role === "contractor";
 }
 
 export async function registerRoutes(
@@ -347,6 +354,20 @@ export async function registerRoutes(
           assignedCleanerId: req.body.assignedCleanerId,
           jobId: job.id,
         });
+
+        if (cleaner.userId) {
+          const scheduledDate = new Date(request.requestedDate).toLocaleDateString("en-US", {
+            weekday: "short", month: "short", day: "numeric",
+          });
+          await storage.createNotification({
+            userId: cleaner.userId,
+            title: "New Cleaning Scheduled",
+            message: `You've been assigned a cleaning at ${request.propertyAddress} on ${scheduledDate}.`,
+            type: "job_assigned",
+            jobId: job.id,
+          });
+        }
+
         return res.json(updated);
       }
 
@@ -384,6 +405,116 @@ export async function registerRoutes(
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
     }
+  });
+
+  // === CONTRACTOR PORTAL ROUTES ===
+  app.get("/api/contractor/profile", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const contractor = await isContractor(req);
+    if (!contractor) return res.status(403).json({ message: "Contractor only" });
+    const cleaner = await storage.getCleanerByUserId(userId);
+    if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+    res.json(cleaner);
+  });
+
+  app.get("/api/contractor/jobs", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const contractor = await isContractor(req);
+    if (!contractor) return res.status(403).json({ message: "Contractor only" });
+    const cleaner = await storage.getCleanerByUserId(userId);
+    if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+    const contractorJobs = await storage.getJobsByCleanerId(cleaner.id);
+    res.json(contractorJobs);
+  });
+
+  app.get("/api/contractor/availability", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const contractor = await isContractor(req);
+    if (!contractor) return res.status(403).json({ message: "Contractor only" });
+    const cleaner = await storage.getCleanerByUserId(userId);
+    if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+    const availability = await storage.getCleanerAvailability(cleaner.id);
+    res.json(availability);
+  });
+
+  app.post("/api/contractor/availability", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const contractor = await isContractor(req);
+      if (!contractor) return res.status(403).json({ message: "Contractor only" });
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+
+      await storage.deleteCleanerAvailability(cleaner.id);
+      const slots = req.body.slots || [];
+      const results = [];
+      for (const slot of slots) {
+        const validated = insertCleanerAvailabilitySchema.parse({
+          cleanerId: cleaner.id,
+          ...slot,
+        });
+        const avail = await storage.setCleanerAvailability(validated);
+        results.push(avail);
+      }
+      res.json(results);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  app.patch("/api/contractor/jobs/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const contractor = await isContractor(req);
+      if (!contractor) return res.status(403).json({ message: "Contractor only" });
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+
+      const job = await storage.getJob(req.params.id);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+      if (job.cleanerId !== cleaner.id) return res.status(403).json({ message: "Not your job" });
+
+      const { status } = req.body;
+      if (!["in_progress", "completed"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const updated = await storage.updateJob(job.id, { status });
+
+      if (status === "completed") {
+        await storage.updateCleaner(cleaner.id, {
+          totalJobs: (cleaner.totalJobs || 0) + 1,
+          totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.price)).toFixed(2),
+        });
+        if (job.serviceRequestId) {
+          await storage.updateServiceRequest(job.serviceRequestId, { status: "completed" });
+        }
+      }
+
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === NOTIFICATION ROUTES ===
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const notifs = await storage.getNotificationsByUserId(userId);
+    res.json(notifs);
+  });
+
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const notification = await storage.markNotificationRead(req.params.id, userId);
+    if (!notification) return res.status(404).json({ message: "Not found" });
+    res.json(notification);
+  });
+
+  app.post("/api/notifications/read-all", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    await storage.markAllNotificationsRead(userId);
+    res.json({ success: true });
   });
 
   // === DASHBOARD STATS ===

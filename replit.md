@@ -1,9 +1,10 @@
 # CleanSlate - Cleaning Dispatch Platform
 
 ## Overview
-A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business in the NJ Shore market. Features a dual-portal architecture:
+A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business in the NJ Shore market. Features a triple-portal architecture:
 - **Client Portal**: Clients create accounts, request cleaning services, track bookings, and rate completed services
 - **Admin Portal**: Dispatch management with job tracking, cleaner scorecards, scheduling calendar, client management, payments tracking, and analytics
+- **Contractor Portal**: Cleaners log in to view assigned jobs, manage availability, update job status, and receive notifications
 
 ## Tech Stack
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Shadcn UI
@@ -14,7 +15,7 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **State**: TanStack React Query
 
 ## Project Structure
-- `client/src/pages/` - Landing, Dashboard, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService
+- `client/src/pages/` - Landing, Dashboard, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications
 - `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, UI components
 - `client/src/hooks/` - use-auth.ts (authentication hook)
 - `server/` - Express API routes, Drizzle DB, storage layer, seed data
@@ -25,14 +26,15 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 ## Database Schema
 - **users** - Authentication users (Replit Auth managed)
 - **sessions** - Session storage (Replit Auth managed)
-- **userProfiles** - Role (admin/client), phone, address, city, zip
+- **userProfiles** - Role (admin/client/contractor), phone, address, city, zip
 - **clients** - Business client records with property details
-- **cleaners** - Cleaner profiles with service areas and zip codes
+- **cleaners** - Cleaner profiles with service areas, zip codes, and userId for contractor linking
 - **cleanerAvailability** - Weekly availability schedule per cleaner
 - **jobs** - Cleaning job records with status workflow
 - **serviceRequests** - Client-submitted cleaning requests
 - **payments** - Incoming/outgoing payment tracking
 - **reviews** - Post-service ratings with user linkage
+- **notifications** - In-app notifications (userId, title, message, type, jobId, isRead)
 
 ## Key Features
 ### Client Portal
@@ -50,10 +52,19 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Client/property management
 - Payment tracking (incoming from clients, outgoing to cleaners)
 - Analytics with charts
+- Auto-notification to contractors when jobs are assigned
+
+### Contractor Portal
+- My Jobs page showing assigned/in-progress/completed jobs
+- Start and Complete job actions to update status
+- Weekly availability schedule with day toggles and time ranges
+- Notifications page for job assignments and updates
+- Linked via userId field in cleaners table
 
 ## Authentication & Routing
 - Unauthenticated users see the Landing page
 - Authenticated users with role="client" see the Client Portal (/my-bookings, /request-service, /rate/:id)
+- Authenticated users with role="contractor" see the Contractor Portal (/contractor/jobs, /contractor/availability, /contractor/notifications)
 - Authenticated users with role="admin" see the Admin Portal (/admin/*)
 - Role is stored in userProfiles table; new users default to "client"
 - Role escalation is prevented server-side
@@ -70,9 +81,17 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - POST /api/service-requests/:id/rate
 - GET /api/available-cleaners?zipCode=X&date=Y
 
+### Authenticated (Contractor)
+- GET /api/contractor/profile, /api/contractor/jobs, /api/contractor/availability
+- POST /api/contractor/availability
+- PATCH /api/contractor/jobs/:id/status
+- GET /api/notifications
+- PATCH /api/notifications/:id/read
+- POST /api/notifications/read-all
+
 ### Authenticated (Admin)
 - GET /api/service-requests (all)
-- PATCH /api/service-requests/:id (assign cleaner)
+- PATCH /api/service-requests/:id (assign cleaner, triggers notification)
 - POST /api/cleaner-availability/:cleanerId
 
 ## Running

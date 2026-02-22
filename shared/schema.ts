@@ -33,6 +33,7 @@ export const clients = pgTable("clients", {
 
 export const cleaners = pgTable("cleaners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   email: text("email"),
   phone: text("phone").notNull(),
@@ -109,6 +110,17 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("job_assigned"),
+  jobId: varchar("job_id"),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ id: true, createdAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertCleanerSchema = createInsertSchema(cleaners).omit({ id: true, totalJobs: true, totalRevenue: true });
@@ -117,6 +129,7 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true 
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true });
 export const insertCleanerAvailabilitySchema = createInsertSchema(cleanerAvailability).omit({ id: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
@@ -134,3 +147,5 @@ export type ServiceRequest = typeof serviceRequests.$inferSelect;
 export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
 export type CleanerAvailability = typeof cleanerAvailability.$inferSelect;
 export type InsertCleanerAvailability = z.infer<typeof insertCleanerAvailabilitySchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

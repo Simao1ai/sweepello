@@ -22,6 +22,9 @@ import Schedule from "@/pages/schedule";
 import RequestService from "@/pages/request-service";
 import MyBookings from "@/pages/my-bookings";
 import RateService from "@/pages/rate-service";
+import ContractorJobs from "@/pages/contractor-jobs";
+import ContractorAvailability from "@/pages/contractor-availability";
+import ContractorNotifications from "@/pages/contractor-notifications";
 import type { UserProfile } from "@shared/schema";
 
 function AdminRouter() {
@@ -72,7 +75,8 @@ function AuthenticatedApp() {
     );
   }
 
-  const role = profile?.role === "admin" ? "admin" : "client";
+  const role = profile?.role === "admin" ? "admin" : profile?.role === "contractor" ? "contractor" : "client";
+  const defaultPath = role === "admin" ? "/admin" : role === "contractor" ? "/contractor/jobs" : "/my-bookings";
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -86,9 +90,9 @@ function AuthenticatedApp() {
           <main className="flex-1 overflow-auto">
             <Switch>
               <Route path="/">
-                {role === "admin" ? <Redirect to="/admin" /> : <Redirect to="/my-bookings" />}
+                <Redirect to={defaultPath} />
               </Route>
-              {role === "admin" ? (
+              {role === "admin" && (
                 <>
                   <Route path="/admin" component={Dashboard} />
                   <Route path="/admin/schedule" component={Schedule} />
@@ -98,7 +102,15 @@ function AuthenticatedApp() {
                   <Route path="/admin/payments" component={Payments} />
                   <Route path="/admin/analytics" component={Analytics} />
                 </>
-              ) : (
+              )}
+              {role === "contractor" && (
+                <>
+                  <Route path="/contractor/jobs" component={ContractorJobs} />
+                  <Route path="/contractor/availability" component={ContractorAvailability} />
+                  <Route path="/contractor/notifications" component={ContractorNotifications} />
+                </>
+              )}
+              {role === "client" && (
                 <>
                   <Route path="/my-bookings" component={MyBookings} />
                   <Route path="/request-service" component={RequestService} />

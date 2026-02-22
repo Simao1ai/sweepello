@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -10,6 +10,7 @@ import {
   type UserProfile, type InsertUserProfile,
   type ServiceRequest, type InsertServiceRequest,
   type CleanerAvailability, type InsertCleanerAvailability,
+  type Notification, type InsertNotification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -49,6 +50,14 @@ export interface IStorage {
   getCleanerAvailability(cleanerId: string): Promise<CleanerAvailability[]>;
   setCleanerAvailability(data: InsertCleanerAvailability): Promise<CleanerAvailability>;
   deleteCleanerAvailability(cleanerId: string): Promise<void>;
+
+  getCleanerByUserId(userId: string): Promise<Cleaner | undefined>;
+  getJobsByCleanerId(cleanerId: string): Promise<Job[]>;
+
+  getNotificationsByUserId(userId: string): Promise<Notification[]>;
+  createNotification(data: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: string, userId: string): Promise<Notification | undefined>;
+  markAllNotificationsRead(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -192,6 +201,38 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCleanerAvailability(cleanerId: string): Promise<void> {
     await db.delete(cleanerAvailability).where(eq(cleanerAvailability.cleanerId, cleanerId));
+  }
+
+  async getCleanerByUserId(userId: string): Promise<Cleaner | undefined> {
+    const [cleaner] = await db.select().from(cleaners).where(eq(cleaners.userId, userId));
+    return cleaner;
+  }
+
+  async getJobsByCleanerId(cleanerId: string): Promise<Job[]> {
+    return db.select().from(jobs).where(eq(jobs.cleanerId, cleanerId));
+  }
+
+  async getNotificationsByUserId(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications).where(eq(notifications.userId, userId));
+  }
+
+  async createNotification(data: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values(data).returning();
+    return notification;
+  }
+
+  async markNotificationRead(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db.update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
+      .returning();
+    return notification;
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    await db.update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
   }
 }
 
