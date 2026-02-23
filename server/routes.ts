@@ -6,9 +6,11 @@ import {
   insertClientSchema, insertCleanerSchema, insertJobSchema,
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
+  insertContractorOnboardingSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -688,6 +690,203 @@ export async function registerRoutes(
     });
 
     res.json(events);
+  });
+
+  // === CONTRACTOR ONBOARDING ROUTES ===
+  app.get("/api/contractor/onboarding", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "contractor") {
+      return res.status(403).json({ message: "Contractor only" });
+    }
+    const onboarding = await storage.getContractorOnboarding(userId);
+    res.json(onboarding || null);
+  });
+
+  app.post("/api/contractor/onboarding", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const existing = await storage.getContractorOnboarding(userId);
+      if (existing) {
+        const updated = await storage.updateContractorOnboarding(userId, req.body);
+        return res.json(updated);
+      }
+
+      const validated = insertContractorOnboardingSchema.parse({ ...req.body, userId });
+      const onboarding = await storage.createContractorOnboarding(validated);
+      res.json(onboarding);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  app.post("/api/contractor/onboarding/w9", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const { signatureName } = req.body;
+      if (!signatureName) return res.status(400).json({ message: "Signature name required" });
+
+      const updated = await storage.updateContractorOnboarding(userId, {
+        w9Signed: true,
+        w9SignedAt: new Date(),
+        w9SignatureName: signatureName,
+      });
+      if (!updated) return res.status(404).json({ message: "Onboarding record not found. Complete Step 1 first." });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/contractor/onboarding/insurance", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const { insuranceProvider, insurancePolicyNumber, insuranceExpirationDate, hasInsurance } = req.body;
+      const updated = await storage.updateContractorOnboarding(userId, {
+        insuranceProvider: insuranceProvider || null,
+        insurancePolicyNumber: insurancePolicyNumber || null,
+        insuranceExpirationDate: insuranceExpirationDate || null,
+        hasInsurance: hasInsurance === true,
+      });
+      if (!updated) return res.status(404).json({ message: "Onboarding record not found. Complete Step 1 first." });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/contractor/onboarding/stripe-connect", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const onboarding = await storage.getContractorOnboarding(userId);
+      if (!onboarding) return res.status(404).json({ message: "Complete onboarding steps first" });
+
+      const stripe = await getUncachableStripeClient();
+
+      let accountId = onboarding.stripeAccountId;
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: "express",
+          country: "US",
+          email: onboarding.email,
+          capabilities: {
+            transfers: { requested: true },
+          },
+          business_type: "individual",
+          metadata: {
+            userId,
+            onboardingId: onboarding.id,
+          },
+        });
+        accountId = account.id;
+        await storage.updateContractorOnboarding(userId, { stripeAccountId: accountId });
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${baseUrl}/contractor/onboarding?step=4&refresh=true`,
+        return_url: `${baseUrl}/contractor/onboarding?step=4&complete=true`,
+        type: "account_onboarding",
+      });
+
+      res.json({ url: accountLink.url, accountId });
+    } catch (err: unknown) {
+      console.error("Stripe Connect error:", err);
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.get("/api/contractor/onboarding/stripe-status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const onboarding = await storage.getContractorOnboarding(userId);
+      if (!onboarding || !onboarding.stripeAccountId) {
+        return res.json({ connected: false, chargesEnabled: false, payoutsEnabled: false });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(onboarding.stripeAccountId);
+
+      const isComplete = account.charges_enabled && account.payouts_enabled;
+      if (isComplete && !onboarding.stripeOnboardingComplete) {
+        await storage.updateContractorOnboarding(userId, { stripeOnboardingComplete: true });
+      }
+
+      res.json({
+        connected: true,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        detailsSubmitted: account.details_submitted,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/contractor/onboarding/complete", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const onboarding = await storage.getContractorOnboarding(userId);
+      if (!onboarding) return res.status(404).json({ message: "No onboarding found" });
+
+      if (!onboarding.w9Signed) return res.status(400).json({ message: "W-9 not signed" });
+
+      const existingCleaner = await storage.getCleanerByUserId(userId);
+      if (!existingCleaner) {
+        await storage.createCleaner({
+          name: onboarding.fullName,
+          email: onboarding.email,
+          phone: onboarding.phone,
+          payRate: "25.00",
+          status: "active",
+          rating: "0",
+          onTimePercent: "100",
+          serviceArea: onboarding.city + ", " + onboarding.state,
+          zipCodes: onboarding.serviceZipCodes || onboarding.zipCode,
+          userId,
+        });
+      }
+
+      await storage.updateContractorOnboarding(userId, { onboardingStatus: "complete" });
+      res.json({ success: true });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.get("/api/stripe/publishable-key", async (_req, res) => {
+    try {
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (err: unknown) {
+      res.status(500).json({ message: "Stripe not configured" });
+    }
   });
 
   return httpServer;
