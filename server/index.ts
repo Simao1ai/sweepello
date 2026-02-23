@@ -29,11 +29,22 @@ async function initStripe() {
 
     const stripeSync = await getStripeSync();
 
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
-    const { webhook } = await stripeSync.findOrCreateManagedWebhook(
-      `${webhookBaseUrl}/api/stripe/webhook`
-    );
-    console.log(`Webhook configured: ${webhook.url}`);
+    const domains = process.env.REPLIT_DOMAINS;
+    if (domains) {
+      const webhookBaseUrl = `https://${domains.split(',')[0]}`;
+      try {
+        const result = await stripeSync.findOrCreateManagedWebhook(
+          `${webhookBaseUrl}/api/stripe/webhook`
+        );
+        if (result?.webhook) {
+          console.log(`Webhook configured: ${result.webhook.url}`);
+        }
+      } catch (webhookErr: any) {
+        console.warn('Webhook setup skipped:', webhookErr.message);
+      }
+    } else {
+      console.warn('REPLIT_DOMAINS not set, skipping webhook setup');
+    }
 
     stripeSync.syncBackfill()
       .then(() => console.log('Stripe data synced'))

@@ -25,7 +25,8 @@ import RateService from "@/pages/rate-service";
 import ContractorJobs from "@/pages/contractor-jobs";
 import ContractorAvailability from "@/pages/contractor-availability";
 import ContractorNotifications from "@/pages/contractor-notifications";
-import type { UserProfile } from "@shared/schema";
+import ContractorOnboarding from "@/pages/contractor-onboarding";
+import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } from "@shared/schema";
 
 function AdminRouter() {
   return (
@@ -59,12 +60,19 @@ function AuthenticatedApp() {
     queryKey: ["/api/profile"],
   });
 
+  const role = profile?.role === "admin" ? "admin" : profile?.role === "contractor" ? "contractor" : "client";
+
+  const { data: onboarding, isLoading: onboardingLoading } = useQuery<ContractorOnboardingType | null>({
+    queryKey: ["/api/contractor/onboarding"],
+    enabled: role === "contractor",
+  });
+
   const style = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
-  if (profileLoading) {
+  if (profileLoading || (role === "contractor" && onboardingLoading)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="space-y-4 text-center">
@@ -75,8 +83,8 @@ function AuthenticatedApp() {
     );
   }
 
-  const role = profile?.role === "admin" ? "admin" : profile?.role === "contractor" ? "contractor" : "client";
-  const defaultPath = role === "admin" ? "/admin" : role === "contractor" ? "/contractor/jobs" : "/my-bookings";
+  const needsOnboarding = role === "contractor" && (!onboarding || onboarding.onboardingStatus !== "complete");
+  const defaultPath = role === "admin" ? "/admin" : role === "contractor" ? (needsOnboarding ? "/contractor/onboarding" : "/contractor/jobs") : "/my-bookings";
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -105,9 +113,18 @@ function AuthenticatedApp() {
               )}
               {role === "contractor" && (
                 <>
-                  <Route path="/contractor/jobs" component={ContractorJobs} />
-                  <Route path="/contractor/availability" component={ContractorAvailability} />
-                  <Route path="/contractor/notifications" component={ContractorNotifications} />
+                  <Route path="/contractor/onboarding" component={ContractorOnboarding} />
+                  {needsOnboarding ? (
+                    <Route path="/contractor/:rest*">
+                      <Redirect to="/contractor/onboarding" />
+                    </Route>
+                  ) : (
+                    <>
+                      <Route path="/contractor/jobs" component={ContractorJobs} />
+                      <Route path="/contractor/availability" component={ContractorAvailability} />
+                      <Route path="/contractor/notifications" component={ContractorNotifications} />
+                    </>
+                  )}
                 </>
               )}
               {role === "client" && (
