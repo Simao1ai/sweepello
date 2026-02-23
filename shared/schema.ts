@@ -139,6 +139,36 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const contractorOnboarding = pgTable("contractor_onboarding", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  fullName: text("full_name").notNull(),
+  businessName: text("business_name"),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull().default("NJ"),
+  zipCode: text("zip_code").notNull(),
+  serviceZipCodes: text("service_zip_codes"),
+  w9Signed: boolean("w9_signed").notNull().default(false),
+  w9SignedAt: timestamp("w9_signed_at"),
+  w9SignatureName: text("w9_signature_name"),
+  insuranceProvider: text("insurance_provider"),
+  insurancePolicyNumber: text("insurance_policy_number"),
+  insuranceExpirationDate: text("insurance_expiration_date"),
+  hasInsurance: boolean("has_insurance").notNull().default(false),
+  stripeAccountId: text("stripe_account_id"),
+  stripeOnboardingComplete: boolean("stripe_onboarding_complete").notNull().default(false),
+  onboardingStatus: text("onboarding_status").notNull().default("incomplete"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContractorOnboardingSchema = createInsertSchema(contractorOnboarding).omit({ id: true, createdAt: true, updatedAt: true, stripeAccountId: true, stripeOnboardingComplete: true, onboardingStatus: true });
+export type ContractorOnboarding = typeof contractorOnboarding.$inferSelect;
+export type InsertContractorOnboarding = z.infer<typeof insertContractorOnboardingSchema>;
+
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ id: true, createdAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });
 export const insertCleanerSchema = createInsertSchema(cleaners).omit({ id: true, totalJobs: true, totalRevenue: true });
