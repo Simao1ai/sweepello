@@ -151,6 +151,10 @@ export const contractorOnboarding = pgTable("contractor_onboarding", {
   state: text("state").notNull().default("NJ"),
   zipCode: text("zip_code").notNull(),
   serviceZipCodes: text("service_zip_codes"),
+  agreementSigned: boolean("agreement_signed").notNull().default(false),
+  agreementSignedAt: timestamp("agreement_signed_at"),
+  agreementSignatureName: text("agreement_signature_name"),
+  agreementDeclined: boolean("agreement_declined").notNull().default(false),
   w9Signed: boolean("w9_signed").notNull().default(false),
   w9SignedAt: timestamp("w9_signed_at"),
   w9SignatureName: text("w9_signature_name"),
@@ -165,7 +169,7 @@ export const contractorOnboarding = pgTable("contractor_onboarding", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertContractorOnboardingSchema = createInsertSchema(contractorOnboarding).omit({ id: true, createdAt: true, updatedAt: true, stripeAccountId: true, stripeOnboardingComplete: true, onboardingStatus: true });
+export const insertContractorOnboardingSchema = createInsertSchema(contractorOnboarding).omit({ id: true, createdAt: true, updatedAt: true, stripeAccountId: true, stripeOnboardingComplete: true, onboardingStatus: true, agreementSigned: true, agreementSignedAt: true, agreementSignatureName: true, agreementDeclined: true });
 export type ContractorOnboarding = typeof contractorOnboarding.$inferSelect;
 export type InsertContractorOnboarding = z.infer<typeof insertContractorOnboardingSchema>;
 

@@ -1,0 +1,231 @@
+Perfect. We’ll build a New Jersey Contractor Onboarding Packet that is legally structured, scalable for your platform, and built to protect you from NJ ABC misclassification risk.
+
+This will include:
+	1.	NJ Independent Contractor Agreement
+	2.	W-9 Form Collection
+	3.	ACH Direct Deposit Authorization
+	4.	Insurance Verification Form
+	5.	Background Check Authorization
+	6.	Contractor Onboarding Checklist
+	7.	Platform Rules & Standards Addendum
+
+You can use this as:
+	•	A downloadable PDF packet
+	•	In-app onboarding flow
+	•	DocuSign upload
+	•	Stored contractor compliance record
+
+⸻
+
+NEW JERSEY CLEANING CONTRACTOR
+
+ONBOARDING PACKET
+
+⸻
+
+SECTION 1
+
+INDEPENDENT CONTRACTOR AGREEMENT
+
+(Previously generated — will be included as first document in packet)
+
+[Insert the NJ Independent Contractor Agreement we created above.]
+
+⸻
+
+SECTION 2
+
+FORM W-9 COLLECTION NOTICE
+
+Subcontractor agrees to complete IRS Form W-9 prior to receiving payment.
+
+Company will issue Form 1099-NEC annually for compensation exceeding IRS reporting thresholds.
+
+Subcontractor acknowledges:
+	•	They are responsible for federal and NJ state taxes
+	•	No payroll taxes will be withheld
+	•	They are not eligible for unemployment benefits through the Company
+
+Signature: ______________________
+Date: __________________________
+
+(Attach official IRS W-9 form in packet)
+
+⸻
+
+SECTION 3
+
+ACH DIRECT DEPOSIT AUTHORIZATION
+
+Subcontractor Name: ___________________________
+
+Bank Name: __________________________________
+
+Account Type: □ Checking □ Savings
+
+Routing Number: _____________________________
+
+Account Number: _____________________________
+
+Subcontractor authorizes Company to deposit payments electronically.
+
+Subcontractor Signature: _____________________
+Date: _______________________________________
+
+⸻
+
+SECTION 4
+
+INSURANCE VERIFICATION FORM (NJ)
+
+Subcontractor certifies the following:
+
+□ I carry General Liability Insurance
+Carrier: __________________________
+Policy #: __________________________
+Coverage Amount: __________________
+Expiration Date: ___________________
+
+□ I do NOT currently carry insurance (I understand this may limit assignments)
+
+Subcontractor agrees to notify Company of any lapse in coverage.
+
+Signature: _________________________
+Date: _____________________________
+
+⸻
+
+SECTION 5
+
+BACKGROUND CHECK AUTHORIZATION
+
+Subcontractor authorizes Company to conduct:
+	•	Criminal background check
+	•	Identity verification
+	•	Business registration verification
+
+Subcontractor understands that assignment eligibility may depend on screening results.
+
+Signature: _________________________
+Date: _____________________________
+
+⸻
+
+SECTION 6
+
+PLATFORM STANDARDS & PERFORMANCE ADDENDUM
+
+Subcontractor agrees to:
+	•	Maintain professional attire and appearance
+	•	Arrive within scheduled arrival window
+	•	Bring all required supplies and equipment
+	•	Follow client scope of work
+	•	Correct deficiencies within 48 hours if reported
+	•	Maintain minimum rating of ___ stars (if applicable)
+
+Repeated complaints may result in:
+	•	Suspension
+	•	Removal from platform
+	•	Permanent termination
+
+⸻
+
+SECTION 7
+
+CLIENT NON-SOLICITATION ACKNOWLEDGMENT
+
+Subcontractor acknowledges:
+
+All clients introduced through the Company platform are proprietary business relationships.
+
+Subcontractor agrees not to:
+	•	Contact clients directly for off-platform services
+	•	Accept direct payments outside the platform
+	•	Share client contact information
+
+Duration: 18 months post-termination.
+
+Liquidated Damages: Estimated 12-month client value.
+
+Signature: _________________________
+Date: _____________________________
+
+⸻
+
+SECTION 8
+
+CONTRACTOR ONBOARDING CHECKLIST
+
+Company Use Only:
+
+□ Independent Contractor Agreement Signed
+□ W-9 Received
+□ ACH Form Received
+□ Insurance Certificate Uploaded
+□ Background Check Completed
+□ ID Verified
+□ Platform Orientation Completed
+
+Approved By: _______________________
+Date: _____________________________
+
+⸻
+
+OPTIONAL ADDITIONS (Highly Recommended for NJ)
+
+Because NJ is aggressive on worker classification enforcement, you should also consider:
+
+• Business Registration Certificate upload requirement
+• LLC formation proof (if applicable)
+• EIN verification
+• Proof of independent marketing (optional but strengthens ABC test defense)
+
+⸻
+
+HOW TO STRUCTURE THIS INSIDE YOUR APP
+
+Since you’re building tech-driven systems across your ventures, here’s the optimal flow:
+
+Step 1: Account Creation
+Step 2: Identity Upload (Driver’s License)
+Step 3: Insurance Upload
+Step 4: E-Sign Contractor Agreement
+Step 5: W-9 Digital Completion
+Step 6: ACH Form Entry
+Step 7: Background Check Consent
+Step 8: Approval Dashboard Status
+
+You should also build a “Compliance Status” indicator:
+
+Green = Fully Active
+Yellow = Missing Insurance
+Red = Suspended
+
+⸻
+
+VERY IMPORTANT (Strategic Note for You)
+
+Because you are operating as a brokerage model, you must:
+
+• Avoid controlling how cleaning is performed
+• Avoid dictating uniforms
+• Avoid mandatory scheduling
+• Avoid training like employees
+
+You are a platform connecting independent cleaning businesses to clients.
+
+That distinction protects you.
+
+⸻
+
+NEXT STEP OPTIONS
+
+I can now:
+	1.	Convert this into a professionally formatted NJ PDF packet
+	2.	Create a DocuSign-ready combined PDF
+	3.	Draft a Client Service Agreement that mirrors this
+	4.	Create a Cleaner Tier Compensation Model
+	5.	Build a Risk & Damage Claim Procedure
+	6.	Draft Terms of Service for your public website
+
+Tell me which one you want next and I’ll build it properly structured for scale.

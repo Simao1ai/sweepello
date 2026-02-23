@@ -725,6 +725,39 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/contractor/onboarding/agreement", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") {
+        return res.status(403).json({ message: "Contractor only" });
+      }
+
+      const { signatureName, agreed } = req.body;
+      if (agreed === false) {
+        const updated = await storage.updateContractorOnboarding(userId, {
+          agreementDeclined: true,
+          agreementSigned: false,
+        });
+        if (!updated) return res.status(404).json({ message: "Onboarding record not found. Complete Step 1 first." });
+        return res.json(updated);
+      }
+
+      if (!signatureName) return res.status(400).json({ message: "Signature name required" });
+
+      const updated = await storage.updateContractorOnboarding(userId, {
+        agreementSigned: true,
+        agreementSignedAt: new Date(),
+        agreementSignatureName: signatureName,
+        agreementDeclined: false,
+      });
+      if (!updated) return res.status(404).json({ message: "Onboarding record not found. Complete Step 1 first." });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
   app.post("/api/contractor/onboarding/w9", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
@@ -805,8 +838,8 @@ export async function registerRoutes(
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${baseUrl}/contractor/onboarding?step=4&refresh=true`,
-        return_url: `${baseUrl}/contractor/onboarding?step=4&complete=true`,
+        refresh_url: `${baseUrl}/contractor/onboarding?step=5&refresh=true`,
+        return_url: `${baseUrl}/contractor/onboarding?step=5&complete=true`,
         type: "account_onboarding",
       });
 
@@ -855,6 +888,7 @@ export async function registerRoutes(
       const onboarding = await storage.getContractorOnboarding(userId);
       if (!onboarding) return res.status(404).json({ message: "No onboarding found" });
 
+      if (!onboarding.agreementSigned) return res.status(400).json({ message: "Subcontractor agreement not signed" });
       if (!onboarding.w9Signed) return res.status(400).json({ message: "W-9 not signed" });
 
       const existingCleaner = await storage.getCleanerByUserId(userId);
