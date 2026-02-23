@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -12,6 +12,7 @@ import {
   type CleanerAvailability, type InsertCleanerAvailability,
   type Notification, type InsertNotification,
   type JobOffer, type InsertJobOffer,
+  type ContractorOnboarding, type InsertContractorOnboarding,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -67,6 +68,10 @@ export interface IStorage {
   updateJobOffer(id: string, data: Partial<JobOffer>): Promise<JobOffer | undefined>;
 
   getReviewsByCleanerId(cleanerId: string): Promise<Review[]>;
+
+  getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined>;
+  createContractorOnboarding(data: InsertContractorOnboarding): Promise<ContractorOnboarding>;
+  updateContractorOnboarding(userId: string, data: Partial<ContractorOnboarding>): Promise<ContractorOnboarding | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -269,6 +274,24 @@ export class DatabaseStorage implements IStorage {
 
   async getReviewsByCleanerId(cleanerId: string): Promise<Review[]> {
     return db.select().from(reviews).where(eq(reviews.cleanerId, cleanerId));
+  }
+
+  async getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined> {
+    const [onboarding] = await db.select().from(contractorOnboarding).where(eq(contractorOnboarding.userId, userId));
+    return onboarding;
+  }
+
+  async createContractorOnboarding(data: InsertContractorOnboarding): Promise<ContractorOnboarding> {
+    const [onboarding] = await db.insert(contractorOnboarding).values(data).returning();
+    return onboarding;
+  }
+
+  async updateContractorOnboarding(userId: string, data: Partial<ContractorOnboarding>): Promise<ContractorOnboarding | undefined> {
+    const [onboarding] = await db.update(contractorOnboarding)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(contractorOnboarding.userId, userId))
+      .returning();
+    return onboarding;
   }
 }
 
