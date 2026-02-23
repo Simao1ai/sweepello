@@ -12,8 +12,10 @@ import {
   LogOut,
   Bell,
   Clock,
+  ClipboardCheck,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import type { User } from "@shared/schema";
+import type { User, ContractorOnboarding } from "@shared/schema";
 
 const adminNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -51,6 +53,10 @@ const contractorNavItems = [
   { title: "Notifications", url: "/contractor/notifications", icon: Bell },
 ];
 
+const contractorOnboardingNavItems = [
+  { title: "Complete Setup", url: "/contractor/onboarding", icon: ClipboardCheck },
+];
+
 interface AppSidebarProps {
   role: "admin" | "client" | "contractor";
   user?: User | null;
@@ -58,7 +64,14 @@ interface AppSidebarProps {
 
 export function AppSidebar({ role, user }: AppSidebarProps) {
   const [location] = useLocation();
-  const navItems = role === "admin" ? adminNavItems : role === "contractor" ? contractorNavItems : clientNavItems;
+
+  const { data: onboarding } = useQuery<ContractorOnboarding | null>({
+    queryKey: ["/api/contractor/onboarding"],
+    enabled: role === "contractor",
+  });
+
+  const needsOnboarding = role === "contractor" && (!onboarding || onboarding.onboardingStatus !== "complete");
+  const navItems = role === "admin" ? adminNavItems : role === "contractor" ? (needsOnboarding ? contractorOnboardingNavItems : contractorNavItems) : clientNavItems;
   const groupLabel = role === "admin" ? "Management" : role === "contractor" ? "Contractor" : "Services";
 
   const initials = user
@@ -68,7 +81,7 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href={role === "admin" ? "/admin" : role === "contractor" ? "/contractor/jobs" : "/my-bookings"} data-testid="link-home">
+        <Link href={role === "admin" ? "/admin" : role === "contractor" ? (needsOnboarding ? "/contractor/onboarding" : "/contractor/jobs") : "/my-bookings"} data-testid="link-home">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
               <Sparkles className="h-5 w-5 text-primary-foreground" />

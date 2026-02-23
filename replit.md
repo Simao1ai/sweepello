@@ -11,11 +11,12 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **Backend**: Express.js + TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: Replit Auth (OIDC with Google, GitHub, email support)
+- **Payments**: Stripe Connect (express accounts for contractor payouts), stripe-replit-sync for schema/webhook management
 - **Routing**: Wouter
 - **State**: TanStack React Query
 
 ## Project Structure
-- `client/src/pages/` - Landing, Dashboard, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications
+- `client/src/pages/` - Landing, Dashboard, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding
 - `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, UI components
 - `client/src/hooks/` - use-auth.ts (authentication hook)
 - `server/` - Express API routes, Drizzle DB, storage layer, seed data
@@ -36,6 +37,7 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **payments** - Incoming/outgoing payment tracking
 - **reviews** - Post-service ratings with user linkage
 - **notifications** - In-app notifications (userId, title, message, type, jobId, serviceRequestId, jobOfferId, isRead)
+- **contractorOnboarding** - Multi-step contractor onboarding (userId, business info, W-9 signature, insurance, Stripe Connect accountId, onboardingStatus)
 
 ## Key Features
 ### Client Portal
@@ -56,6 +58,12 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Analytics with charts
 
 ### Contractor Portal
+- **Onboarding (gated)**: 4-step onboarding flow required before accessing jobs
+  - Step 1: Business info (name, contact, address, service zip codes)
+  - Step 2: W-9 tax agreement with electronic signature
+  - Step 3: Liability insurance details (optional but recommended)
+  - Step 4: Stripe Connect payment setup for direct deposit payouts
+  - On completion: auto-creates cleaner profile in cleaners table
 - My Jobs page showing assigned/in-progress/completed jobs
 - Accept/Decline job offers (Uber-style notifications with priority for preferred cleaner)
 - Start and Complete job actions to update status
@@ -97,6 +105,13 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - GET /api/pricing-estimate?propertyType=X&bedrooms=N&bathrooms=N&squareFootage=N
 
 ### Authenticated (Contractor)
+- GET /api/contractor/onboarding (get onboarding status)
+- POST /api/contractor/onboarding (save business info - step 1)
+- POST /api/contractor/onboarding/w9 (sign W-9 - step 2)
+- POST /api/contractor/onboarding/insurance (save insurance info - step 3)
+- POST /api/contractor/onboarding/stripe-connect (create Stripe Connect account link - step 4)
+- GET /api/contractor/onboarding/stripe-status (check Stripe account status)
+- POST /api/contractor/onboarding/complete (finalize onboarding, create cleaner profile)
 - GET /api/contractor/profile, /api/contractor/jobs, /api/contractor/availability
 - POST /api/contractor/availability
 - PATCH /api/contractor/jobs/:id/status
