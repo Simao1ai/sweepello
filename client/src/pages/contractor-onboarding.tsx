@@ -7,20 +7,234 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { ContractorOnboarding } from "@shared/schema";
 import {
-  User, FileText, Shield, CreditCard, CheckCircle2, ChevronRight, ChevronLeft, Loader2, ExternalLink,
+  User, FileText, Shield, CreditCard, CheckCircle2, ChevronRight, ChevronLeft, Loader2, ExternalLink, Scale, XCircle,
 } from "lucide-react";
 
 const steps = [
   { id: 1, title: "Business Info", icon: User, description: "Your contact and business details" },
-  { id: 2, title: "W-9 Agreement", icon: FileText, description: "Tax information acknowledgment" },
-  { id: 3, title: "Insurance", icon: Shield, description: "Liability insurance details" },
-  { id: 4, title: "Payment Setup", icon: CreditCard, description: "Connect your bank for payouts" },
+  { id: 2, title: "Agreement", icon: Scale, description: "Independent subcontractor agreement" },
+  { id: 3, title: "W-9 Agreement", icon: FileText, description: "Tax information acknowledgment" },
+  { id: 4, title: "Insurance", icon: Shield, description: "Liability insurance details" },
+  { id: 5, title: "Payment Setup", icon: CreditCard, description: "Connect your bank for payouts" },
 ];
+
+function AgreementContent() {
+  return (
+    <div className="space-y-6 text-sm">
+      <div>
+        <h3 className="font-bold text-base mb-2">INDEPENDENT SUBCONTRACTOR AGREEMENT</h3>
+        <p className="text-muted-foreground italic">(Cleaning Services Brokerage Model)</p>
+      </div>
+
+      <p>
+        This Independent Subcontractor Agreement ("Agreement") is entered into as of the date of electronic acceptance ("Effective Date"), by and between:
+      </p>
+      <p>
+        <strong>[Company Name], LLC</strong>, a New Jersey limited liability company ("Company"),
+        and the undersigned Subcontractor ("Subcontractor"). Collectively, the "Parties."
+      </p>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">1. Independent Contractor Status (NJ Compliant Language)</h4>
+        <p className="mb-2">The Parties expressly agree that Subcontractor is an independent contractor and not an employee of the Company.</p>
+        <p className="mb-1">Subcontractor:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Operates an independently established cleaning business</li>
+          <li>Is free to accept or decline service opportunities</li>
+          <li>Sets their own schedule (within job timeframes)</li>
+          <li>Uses their own tools, equipment, and supplies</li>
+          <li>May perform services for other companies or clients</li>
+          <li>Is responsible for all taxes, insurance, and business expenses</li>
+          <li>Is not eligible for unemployment insurance, workers compensation, benefits, or overtime</li>
+        </ul>
+        <p className="mt-2">Nothing herein shall be construed as creating an employer-employee relationship under New Jersey law.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">2. Scope of Services</h4>
+        <p className="mb-1">Subcontractor agrees to perform residential and/or commercial cleaning services, including:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Standard cleaning</li>
+          <li>Deep cleaning</li>
+          <li>Move-in / move-out cleaning</li>
+          <li>Post-construction cleaning</li>
+          <li>Recurring maintenance services</li>
+          <li>Add-on specialty services</li>
+        </ul>
+        <p className="mt-2">All services must meet professional industry standards.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">3. Job Assignment Process</h4>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Service requests are offered through the Company platform.</li>
+          <li>Subcontractor may accept or decline.</li>
+          <li>Once accepted, the job becomes a binding commitment.</li>
+          <li>Failure to complete an accepted job without reasonable cause may result in suspension or termination.</li>
+        </ul>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">4. Compensation Structure</h4>
+        <p className="mb-2">Subcontractor shall be paid per completed job as outlined prior to acceptance.</p>
+        <p className="font-medium mb-1">Payment Terms:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Payment issued after job completion and client confirmation.</li>
+          <li>Paid via ACH or approved electronic method.</li>
+          <li>Company retains its brokerage/platform service fee.</li>
+        </ul>
+        <p className="mt-2">Subcontractor acknowledges that compensation is project-based, not hourly employment wages.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">5. Insurance Requirements (Strongly Recommended in NJ)</h4>
+        <p className="mb-1">Subcontractor agrees to maintain:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>General Liability Insurance (minimum $1,000,000 per occurrence)</li>
+          <li>Any required NJ business registration</li>
+          <li>If applicable, NJ Business Registration Certificate (BRC)</li>
+        </ul>
+        <p className="mt-2 mb-1">Subcontractor assumes full liability for:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Property damage</li>
+          <li>Bodily injury</li>
+          <li>Negligence</li>
+          <li>Acts of assistants or helpers</li>
+        </ul>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">6. Supplies & Equipment</h4>
+        <p className="mb-1">Subcontractor shall provide:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>All cleaning products</li>
+          <li>Equipment and machinery</li>
+          <li>Protective gear</li>
+          <li>Transportation</li>
+        </ul>
+        <p className="mt-2">Company does not provide tools or supplies.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">7. Non-Solicitation of Clients (Critical Protection)</h4>
+        <p className="mb-2">During this Agreement and for 18 months following termination, Subcontractor agrees not to:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Directly solicit Company clients</li>
+          <li>Accept direct payment from Company clients</li>
+          <li>Provide services outside the Company platform to introduced clients</li>
+        </ul>
+        <p className="mt-2 mb-1">Violation may result in:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Immediate termination</li>
+          <li>Liquidated damages equal to 12 months of estimated client value</li>
+          <li>Legal action</li>
+        </ul>
+        <p className="mt-2 font-medium">This clause survives termination.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">8. Confidentiality</h4>
+        <p className="mb-1">Subcontractor shall not disclose:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Client data</li>
+          <li>Pricing structure</li>
+          <li>Platform systems</li>
+          <li>Operational processes</li>
+        </ul>
+        <p className="mt-2 font-medium">Confidentiality survives termination.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">9. Quality & Performance Standards</h4>
+        <p className="mb-1">Subcontractor agrees to:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Arrive on time</li>
+          <li>Maintain professional conduct</li>
+          <li>Perform services according to booking specifications</li>
+          <li>Remedy reported deficiencies within 48 hours when applicable</li>
+          <li>Maintain satisfactory client ratings</li>
+        </ul>
+        <p className="mt-2">Repeated complaints may result in suspension or termination.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">10. Indemnification</h4>
+        <p>Subcontractor shall indemnify and hold harmless the Company from any claims, losses, damages, or legal fees arising from negligent acts, property damage, injury claims, or breach of this Agreement.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">11. Background Check Authorization</h4>
+        <p>Subcontractor consents to background verification as permitted under NJ law.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">12. Term & Termination</h4>
+        <p className="mb-2">This Agreement remains in effect until terminated.</p>
+        <p className="mb-1">Either party may terminate:</p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>With 7 days written notice</li>
+          <li>Immediately for breach, misconduct, fraud, safety violations, or client harm</li>
+        </ul>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">13. Dispute Resolution (NJ Enforceable Structure)</h4>
+        <p className="mb-1">The Parties agree:</p>
+        <ol className="list-decimal pl-5 space-y-1">
+          <li>Good faith mediation first</li>
+          <li>Binding arbitration in the State of New Jersey</li>
+        </ol>
+        <p className="mt-2">Arbitration shall be conducted under the rules of the American Arbitration Association. Each party bears its own legal fees unless otherwise awarded.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">14. Governing Law</h4>
+        <p>This Agreement shall be governed by the laws of the State of New Jersey.</p>
+      </div>
+
+      <Separator />
+
+      <div>
+        <h4 className="font-semibold mb-2">15. Electronic Signature</h4>
+        <p>Electronic acceptance through the Company platform constitutes a legally binding signature.</p>
+      </div>
+    </div>
+  );
+}
 
 export default function ContractorOnboardingPage() {
   const { toast } = useToast();
@@ -44,6 +258,9 @@ export default function ContractorOnboardingPage() {
     serviceZipCodes: "",
   });
 
+  const [agreementSignatureName, setAgreementSignatureName] = useState("");
+  const [agreementAgreed, setAgreementAgreed] = useState(false);
+
   const [w9SignatureName, setW9SignatureName] = useState("");
   const [w9Agreed, setW9Agreed] = useState(false);
 
@@ -65,7 +282,7 @@ export default function ContractorOnboardingPage() {
     detailsSubmitted?: boolean;
   }>({
     queryKey: ["/api/contractor/onboarding/stripe-status"],
-    enabled: currentStep === 4,
+    enabled: currentStep === 5,
     refetchInterval: isComplete ? 3000 : false,
   });
 
@@ -82,6 +299,10 @@ export default function ContractorOnboardingPage() {
         zipCode: onboarding.zipCode || "",
         serviceZipCodes: onboarding.serviceZipCodes || "",
       });
+      if (onboarding.agreementSigned) {
+        setAgreementSignatureName(onboarding.agreementSignatureName || "");
+        setAgreementAgreed(true);
+      }
       if (onboarding.w9Signed) {
         setW9SignatureName(onboarding.w9SignatureName || "");
         setW9Agreed(true);
@@ -110,6 +331,25 @@ export default function ContractorOnboardingPage() {
     },
   });
 
+  const saveAgreementMutation = useMutation({
+    mutationFn: async (params: { signatureName: string; agreed: boolean }) => {
+      const res = await apiRequest("POST", "/api/contractor/onboarding/agreement", params);
+      return res.json();
+    },
+    onSuccess: (_data: ContractorOnboarding, variables: { signatureName: string; agreed: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/onboarding"] });
+      if (variables.agreed) {
+        toast({ title: "Agreement signed" });
+        setCurrentStep(3);
+      } else {
+        toast({ title: "Agreement declined", description: "You can review and sign later to continue onboarding.", variant: "destructive" });
+      }
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   const saveW9Mutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/contractor/onboarding/w9", { signatureName: w9SignatureName });
@@ -118,7 +358,7 @@ export default function ContractorOnboardingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/onboarding"] });
       toast({ title: "W-9 signed" });
-      setCurrentStep(3);
+      setCurrentStep(4);
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -133,7 +373,7 @@ export default function ContractorOnboardingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/onboarding"] });
       toast({ title: "Insurance info saved" });
-      setCurrentStep(4);
+      setCurrentStep(5);
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -179,15 +419,17 @@ export default function ContractorOnboardingPage() {
   }
 
   const isStep1Complete = !!onboarding;
-  const isStep2Complete = !!onboarding?.w9Signed;
-  const isStep3Complete = onboarding?.hasInsurance !== undefined && onboarding?.hasInsurance !== null;
+  const isStep2Complete = !!onboarding?.agreementSigned;
+  const isStep3Complete = !!onboarding?.w9Signed;
+  const isStep4Complete = onboarding?.hasInsurance !== undefined && onboarding?.hasInsurance !== null;
   const isStripeComplete = stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
 
   function getStepStatus(stepId: number) {
     if (stepId === 1 && isStep1Complete) return "complete";
     if (stepId === 2 && isStep2Complete) return "complete";
     if (stepId === 3 && isStep3Complete) return "complete";
-    if (stepId === 4 && isStripeComplete) return "complete";
+    if (stepId === 4 && isStep4Complete) return "complete";
+    if (stepId === 5 && isStripeComplete) return "complete";
     if (stepId === currentStep) return "current";
     return "pending";
   }
@@ -199,12 +441,12 @@ export default function ContractorOnboardingPage() {
         <p className="text-muted-foreground mt-1">Complete these steps to start accepting cleaning jobs</p>
       </div>
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 overflow-x-auto">
         {steps.map((step, idx) => {
           const status = getStepStatus(step.id);
           const Icon = step.icon;
           return (
-            <div key={step.id} className="flex items-center">
+            <div key={step.id} className="flex items-center flex-shrink-0">
               <button
                 onClick={() => setCurrentStep(step.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -221,10 +463,10 @@ export default function ContractorOnboardingPage() {
                 ) : (
                   <Icon className="h-5 w-5" />
                 )}
-                <span className="hidden sm:inline text-sm font-medium">{step.title}</span>
+                <span className="hidden md:inline text-sm font-medium">{step.title}</span>
               </button>
               {idx < steps.length - 1 && (
-                <ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />
               )}
             </div>
           );
@@ -352,6 +594,102 @@ export default function ContractorOnboardingPage() {
       {currentStep === 2 && (
         <Card>
           <CardHeader>
+            <CardTitle>Independent Subcontractor Agreement</CardTitle>
+            <CardDescription>Please read this agreement carefully before signing or declining</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {onboarding?.agreementSigned ? (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-green-700 dark:text-green-400">Agreement Signed</p>
+                  <p className="text-sm text-green-600 dark:text-green-500">
+                    Signed by {onboarding.agreementSignatureName} on{" "}
+                    {onboarding.agreementSignedAt ? new Date(onboarding.agreementSignedAt).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
+              </div>
+            ) : onboarding?.agreementDeclined ? (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-start gap-3">
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-red-700 dark:text-red-400">Agreement Declined</p>
+                  <p className="text-sm text-red-600 dark:text-red-500">
+                    You have declined this agreement. You must sign to complete onboarding and start accepting jobs.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <ScrollArea className="h-[400px] rounded-lg border p-4" data-testid="scroll-agreement-content">
+              <AgreementContent />
+            </ScrollArea>
+
+            {!onboarding?.agreementSigned && (
+              <>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="agreementAgree"
+                    checked={agreementAgreed}
+                    onCheckedChange={(checked) => setAgreementAgreed(checked === true)}
+                    data-testid="checkbox-agreement-agree"
+                  />
+                  <Label htmlFor="agreementAgree" className="text-sm cursor-pointer">
+                    I have read and understand this Independent Subcontractor Agreement
+                  </Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agreementSignature">Electronic Signature (type your full legal name) *</Label>
+                  <Input
+                    id="agreementSignature"
+                    data-testid="input-agreement-signature"
+                    value={agreementSignatureName}
+                    onChange={(e) => setAgreementSignatureName(e.target.value)}
+                    placeholder="Your full legal name"
+                    className="font-serif italic text-lg"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setCurrentStep(1)} data-testid="button-back-step1">
+                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+              {!onboarding?.agreementSigned ? (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={() => saveAgreementMutation.mutate({ signatureName: "", agreed: false })}
+                    disabled={saveAgreementMutation.isPending}
+                    data-testid="button-decline-agreement"
+                  >
+                    {saveAgreementMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-1" />}
+                    Decline
+                  </Button>
+                  <Button
+                    onClick={() => saveAgreementMutation.mutate({ signatureName: agreementSignatureName, agreed: true })}
+                    disabled={saveAgreementMutation.isPending || !agreementAgreed || !agreementSignatureName}
+                    className="flex-1"
+                    data-testid="button-sign-agreement"
+                  >
+                    {saveAgreementMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
+                    Agree & Sign
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setCurrentStep(3)} className="flex-1" data-testid="button-continue-step3">
+                  Continue <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {currentStep === 3 && (
+        <Card>
+          <CardHeader>
             <CardTitle>W-9 Tax Information</CardTitle>
             <CardDescription>As an independent contractor, we need your W-9 acknowledgment for tax reporting</CardDescription>
           </CardHeader>
@@ -407,7 +745,7 @@ export default function ContractorOnboardingPage() {
               </>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setCurrentStep(1)} data-testid="button-back-step1">
+              <Button variant="outline" onClick={() => setCurrentStep(2)} data-testid="button-back-step2">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
               {!onboarding?.w9Signed ? (
@@ -421,7 +759,7 @@ export default function ContractorOnboardingPage() {
                   Sign W-9
                 </Button>
               ) : (
-                <Button onClick={() => setCurrentStep(3)} className="flex-1" data-testid="button-continue-step3">
+                <Button onClick={() => setCurrentStep(4)} className="flex-1" data-testid="button-continue-step4">
                   Continue <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               )}
@@ -430,7 +768,7 @@ export default function ContractorOnboardingPage() {
         </Card>
       )}
 
-      {currentStep === 3 && (
+      {currentStep === 4 && (
         <Card>
           <CardHeader>
             <CardTitle>Liability Insurance</CardTitle>
@@ -494,7 +832,7 @@ export default function ContractorOnboardingPage() {
               </div>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setCurrentStep(2)} data-testid="button-back-step2">
+              <Button variant="outline" onClick={() => setCurrentStep(3)} data-testid="button-back-step3">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
               <Button
@@ -511,7 +849,7 @@ export default function ContractorOnboardingPage() {
         </Card>
       )}
 
-      {currentStep === 4 && (
+      {currentStep === 5 && (
         <Card>
           <CardHeader>
             <CardTitle>Payment Setup</CardTitle>
@@ -566,12 +904,12 @@ export default function ContractorOnboardingPage() {
             )}
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setCurrentStep(3)} data-testid="button-back-step3">
+              <Button variant="outline" onClick={() => setCurrentStep(4)} data-testid="button-back-step4">
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
               <Button
                 onClick={() => completeMutation.mutate()}
-                disabled={completeMutation.isPending || !onboarding?.w9Signed}
+                disabled={completeMutation.isPending || !onboarding?.agreementSigned || !onboarding?.w9Signed}
                 className="flex-1"
                 data-testid="button-complete-onboarding"
               >
@@ -580,9 +918,13 @@ export default function ContractorOnboardingPage() {
               </Button>
             </div>
 
-            {!onboarding?.w9Signed && (
+            {(!onboarding?.agreementSigned || !onboarding?.w9Signed) && (
               <p className="text-sm text-destructive text-center">
-                Please complete the W-9 step before finishing onboarding
+                {!onboarding?.agreementSigned && !onboarding?.w9Signed
+                  ? "Please complete the Agreement and W-9 steps before finishing onboarding"
+                  : !onboarding?.agreementSigned
+                  ? "Please sign the Subcontractor Agreement before finishing onboarding"
+                  : "Please complete the W-9 step before finishing onboarding"}
               </p>
             )}
           </CardContent>

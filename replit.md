@@ -58,11 +58,12 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Analytics with charts
 
 ### Contractor Portal
-- **Onboarding (gated)**: 4-step onboarding flow required before accessing jobs
+- **Onboarding (gated)**: 5-step onboarding flow required before accessing jobs
   - Step 1: Business info (name, contact, address, service zip codes)
-  - Step 2: W-9 tax agreement with electronic signature
-  - Step 3: Liability insurance details (optional but recommended)
-  - Step 4: Stripe Connect payment setup for direct deposit payouts
+  - Step 2: Independent Subcontractor Agreement (NJ-compliant, agree or decline with e-signature)
+  - Step 3: W-9 tax agreement with electronic signature
+  - Step 4: Liability insurance details (optional but recommended)
+  - Step 5: Stripe Connect payment setup for direct deposit payouts
   - On completion: auto-creates cleaner profile in cleaners table
 - My Jobs page showing assigned/in-progress/completed jobs
 - Accept/Decline job offers (Uber-style notifications with priority for preferred cleaner)
@@ -107,9 +108,10 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 ### Authenticated (Contractor)
 - GET /api/contractor/onboarding (get onboarding status)
 - POST /api/contractor/onboarding (save business info - step 1)
-- POST /api/contractor/onboarding/w9 (sign W-9 - step 2)
-- POST /api/contractor/onboarding/insurance (save insurance info - step 3)
-- POST /api/contractor/onboarding/stripe-connect (create Stripe Connect account link - step 4)
+- POST /api/contractor/onboarding/agreement (sign or decline agreement - step 2)
+- POST /api/contractor/onboarding/w9 (sign W-9 - step 3)
+- POST /api/contractor/onboarding/insurance (save insurance info - step 4)
+- POST /api/contractor/onboarding/stripe-connect (create Stripe Connect account link - step 5)
 - GET /api/contractor/onboarding/stripe-status (check Stripe account status)
 - POST /api/contractor/onboarding/complete (finalize onboarding, create cleaner profile)
 - GET /api/contractor/profile, /api/contractor/jobs, /api/contractor/availability
