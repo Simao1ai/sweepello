@@ -13,6 +13,10 @@ import {
   Bell,
   Clock,
   ClipboardCheck,
+  Home,
+  HardHat,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -29,8 +33,9 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { User, ContractorOnboarding } from "@shared/schema";
+import type { User, ContractorOnboarding, Notification } from "@shared/schema";
 
 const adminNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -43,19 +48,52 @@ const adminNavItems = [
 ];
 
 const clientNavItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Bookings", url: "/my-bookings", icon: ClipboardList },
   { title: "Request Service", url: "/request-service", icon: CalendarPlus },
 ];
 
 const contractorNavItems = [
+  { title: "Dashboard", url: "/contractor/dashboard", icon: LayoutDashboard },
   { title: "My Jobs", url: "/contractor/jobs", icon: Briefcase },
   { title: "Availability", url: "/contractor/availability", icon: Clock },
   { title: "Notifications", url: "/contractor/notifications", icon: Bell },
+  { title: "Earnings", url: "/contractor/earnings", icon: TrendingUp },
 ];
 
 const contractorOnboardingNavItems = [
   { title: "Complete Setup", url: "/contractor/onboarding", icon: ClipboardCheck },
 ];
+
+const roleConfig = {
+  admin: {
+    label: "Admin Portal",
+    sublabel: "Dispatch Management",
+    groupLabel: "Management",
+    accentClass: "bg-indigo-600 dark:bg-indigo-500",
+    badgeClass: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  },
+  client: {
+    label: "Client Portal",
+    sublabel: "Cleaning Services",
+    groupLabel: "Services",
+    accentClass: "bg-blue-600 dark:bg-blue-500",
+    badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  },
+  contractor: {
+    label: "Contractor Portal",
+    sublabel: "Professional Cleaning",
+    groupLabel: "Contractor",
+    accentClass: "bg-emerald-600 dark:bg-emerald-500",
+    badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+};
+
+const roleIcons = {
+  admin: LayoutDashboard,
+  client: Home,
+  contractor: HardHat,
+};
 
 interface AppSidebarProps {
   role: "admin" | "client" | "contractor";
@@ -70,38 +108,59 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
     enabled: role === "contractor",
   });
 
+  const { data: notifications } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    enabled: role === "contractor",
+  });
+
+  const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
+
   const needsOnboarding = role === "contractor" && (!onboarding || onboarding.onboardingStatus !== "complete");
-  const navItems = role === "admin" ? adminNavItems : role === "contractor" ? (needsOnboarding ? contractorOnboardingNavItems : contractorNavItems) : clientNavItems;
-  const groupLabel = role === "admin" ? "Management" : role === "contractor" ? "Contractor" : "Services";
+  const navItems = role === "admin"
+    ? adminNavItems
+    : role === "contractor"
+      ? (needsOnboarding ? contractorOnboardingNavItems : contractorNavItems)
+      : clientNavItems;
+
+  const config = roleConfig[role];
+  const RoleIcon = roleIcons[role];
 
   const initials = user
     ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || "U"
     : "U";
 
+  const defaultPath = role === "admin"
+    ? "/admin"
+    : role === "contractor"
+      ? (needsOnboarding ? "/contractor/onboarding" : "/contractor/dashboard")
+      : "/dashboard";
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href={role === "admin" ? "/admin" : role === "contractor" ? (needsOnboarding ? "/contractor/onboarding" : "/contractor/jobs") : "/my-bookings"} data-testid="link-home">
+        <Link href={defaultPath} data-testid="link-home">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            <div className={`flex h-9 w-9 items-center justify-center rounded-md ${config.accentClass}`}>
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
               <h2 className="text-sm font-semibold tracking-tight">CleanSlate</h2>
-              <p className="text-xs text-muted-foreground">
-                {role === "admin" ? "Dispatch Platform" : role === "contractor" ? "Contractor Portal" : "Client Portal"}
-              </p>
+              <p className="text-xs text-muted-foreground">{config.sublabel}</p>
             </div>
           </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{groupLabel}</SidebarGroupLabel>
+          <SidebarGroupLabel className="flex items-center gap-2">
+            <RoleIcon className="h-3.5 w-3.5" />
+            {config.groupLabel}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = location === item.url || (item.url !== "/" && location.startsWith(item.url));
+                const isActive = location === item.url || (item.url !== "/" && item.url.length > 1 && location.startsWith(item.url) && location.length <= item.url.length + 1);
+                const showBadge = item.title === "Notifications" && unreadCount > 0;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
@@ -111,7 +170,12 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
                     >
                       <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="flex-1">{item.title}</span>
+                        {showBadge && (
+                          <Badge variant="secondary" className="ml-auto h-5 min-w-5 px-1 text-xs justify-center bg-red-500/10 text-red-600 dark:text-red-400">
+                            {unreadCount}
+                          </Badge>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -142,8 +206,12 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
           </Button>
         </a>
         <div className="rounded-md bg-accent/50 p-3">
-          <p className="text-xs font-medium">NJ Shore Market</p>
-          <p className="text-xs text-muted-foreground">Airbnb Turnover Focus</p>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={`text-xs ${config.badgeClass}`}>
+              {role.charAt(0).toUpperCase() + role.slice(1)}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">NJ Shore Market</p>
         </div>
       </SidebarFooter>
     </Sidebar>

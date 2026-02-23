@@ -53,12 +53,15 @@ export async function registerRoutes(
     try {
       const userId = getUserId(req);
       const existing = await storage.getUserProfile(userId);
-      const { role: _ignoredRole, ...safeBody } = req.body;
       if (existing) {
+        const { role: _ignoredRole, ...safeBody } = req.body;
         const updated = await storage.updateUserProfile(userId, safeBody);
         return res.json(updated);
       }
-      const validated = insertUserProfileSchema.parse({ ...safeBody, userId, role: "client" });
+      const allowedRoles = ["client", "contractor"];
+      const chosenRole = allowedRoles.includes(req.body.role) ? req.body.role : "client";
+      const { role: _ignored, ...rest } = req.body;
+      const validated = insertUserProfileSchema.parse({ ...rest, userId, role: chosenRole });
       const profile = await storage.createUserProfile(validated);
       res.json(profile);
     } catch (err: unknown) {

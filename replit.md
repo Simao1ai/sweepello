@@ -16,7 +16,7 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **State**: TanStack React Query
 
 ## Project Structure
-- `client/src/pages/` - Landing, Dashboard, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding
+- `client/src/pages/` - Landing, RoleSelection, Dashboard (admin), ClientDashboard, ContractorDashboard, ContractorEarnings, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding
 - `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, UI components
 - `client/src/hooks/` - use-auth.ts (authentication hook)
 - `server/` - Express API routes, Drizzle DB, storage layer, seed data
@@ -85,11 +85,13 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 
 ## Authentication & Routing
 - Unauthenticated users see the Landing page
-- Authenticated users with role="client" see the Client Portal (/my-bookings, /request-service, /rate/:id)
-- Authenticated users with role="contractor" see the Contractor Portal (/contractor/jobs, /contractor/availability, /contractor/notifications)
+- New users (no profile) see the Role Selection page to choose Client or Contractor
+- Authenticated users with role="client" see the Client Portal (/dashboard, /my-bookings, /request-service, /rate/:id)
+- Authenticated users with role="contractor" see the Contractor Portal (/contractor/dashboard, /contractor/jobs, /contractor/availability, /contractor/notifications, /contractor/earnings)
 - Authenticated users with role="admin" see the Admin Portal (/admin/*)
-- Role is stored in userProfiles table; new users default to "client"
-- Role escalation is prevented server-side
+- Role is stored in userProfiles table; set on first profile creation via role selection
+- Role escalation is prevented server-side (admin role cannot be self-assigned)
+- Each portal has distinct sidebar styling (colors, icons, branding)
 
 ## API Routes
 ### Public
