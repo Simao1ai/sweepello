@@ -17,6 +17,7 @@ import {
   HardHat,
   TrendingUp,
   DollarSign,
+  Banknote,
   UserPlus,
   Star,
   AlertTriangle,
@@ -67,6 +68,7 @@ const contractorNavItems = [
   { title: "Availability", url: "/contractor/availability", icon: Clock },
   { title: "Notifications", url: "/contractor/notifications", icon: Bell },
   { title: "Earnings", url: "/contractor/earnings", icon: TrendingUp },
+  { title: "Payouts", url: "/contractor/payouts", icon: Banknote },
 ];
 
 const contractorOnboardingNavItems = [

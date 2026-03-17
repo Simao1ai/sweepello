@@ -31,6 +31,7 @@ import ContractorAvailability from "@/pages/contractor-availability";
 import ContractorNotifications from "@/pages/contractor-notifications";
 import ContractorOnboarding from "@/pages/contractor-onboarding";
 import ContractorApply from "@/pages/contractor-apply";
+import ContractorPayouts from "@/pages/contractor-payouts";
 import Applications from "@/pages/admin/applications";
 import ReviewModeration from "@/pages/admin/review-moderation";
 import Disputes from "@/pages/admin/disputes";
@@ -185,6 +186,7 @@ function ContractorApp({ user }: { user: any }) {
                   <Route path="/contractor/availability" component={ContractorAvailability} />
                   <Route path="/contractor/notifications" component={ContractorNotifications} />
                   <Route path="/contractor/earnings" component={ContractorEarnings} />
+                  <Route path="/contractor/payouts" component={ContractorPayouts} />
                 </>
               )}
               <Route component={NotFound} />

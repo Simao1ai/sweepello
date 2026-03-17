@@ -927,6 +927,120 @@ export async function registerRoutes(
     }
   });
 
+  // === CONTRACTOR PAYOUTS ===
+  app.get("/api/contractor/payouts", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") return res.status(403).json({ message: "Contractor only" });
+
+      const cleaner = await storage.getCleanerByUserId(userId);
+      const onboarding = await storage.getContractorOnboarding(userId);
+
+      let stripeStatus = { connected: false, chargesEnabled: false, payoutsEnabled: false, detailsSubmitted: false, balance: null as any };
+
+      if (onboarding?.stripeAccountId) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const account = await stripe.accounts.retrieve(onboarding.stripeAccountId);
+          const balance = account.charges_enabled ? await stripe.balance.retrieve({ stripeAccount: onboarding.stripeAccountId }) : null;
+          stripeStatus = {
+            connected: true,
+            chargesEnabled: account.charges_enabled ?? false,
+            payoutsEnabled: account.payouts_enabled ?? false,
+            detailsSubmitted: account.details_submitted ?? false,
+            balance,
+          };
+        } catch {}
+      }
+
+      const jobs = cleaner ? await storage.getJobsByCleanerId(cleaner.id) : [];
+      const payoutHistory = jobs
+        .filter(j => j.status === "completed" && j.cleanerPay)
+        .map(j => ({
+          jobId: j.id,
+          propertyAddress: j.propertyAddress,
+          scheduledDate: j.scheduledDate,
+          clientTotal: Number(j.price),
+          cleanSlateMargin: Number(j.profit || 0),
+          yourPayout: Number(j.cleanerPay),
+          marginPercent: j.price && j.profit ? Math.round((Number(j.profit) / Number(j.price)) * 100) : 30,
+          status: "paid",
+        }))
+        .sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime());
+
+      const totalEarned = payoutHistory.reduce((sum, p) => sum + p.yourPayout, 0);
+      const totalClientRevenue = payoutHistory.reduce((sum, p) => sum + p.clientTotal, 0);
+
+      res.json({
+        stripeStatus,
+        payoutHistory,
+        summary: {
+          totalEarned,
+          totalClientRevenue,
+          totalJobs: payoutHistory.length,
+          avgMarginPercent: 30,
+        },
+        stripeAccountId: onboarding?.stripeAccountId || null,
+      });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/contractor/payouts/connect", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") return res.status(403).json({ message: "Contractor only" });
+
+      const onboarding = await storage.getContractorOnboarding(userId);
+      if (!onboarding) return res.status(400).json({ message: "Complete onboarding first" });
+
+      const stripe = await getUncachableStripeClient();
+      let accountId = onboarding.stripeAccountId;
+
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: "express",
+          country: "US",
+          email: onboarding.email,
+          capabilities: { transfers: { requested: true } },
+          business_type: "individual",
+          metadata: { userId, onboardingId: onboarding.id },
+        });
+        accountId = account.id;
+        await storage.updateContractorOnboarding(userId, { stripeAccountId: accountId });
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `${baseUrl}/contractor/payouts`,
+        return_url: `${baseUrl}/contractor/payouts?connected=true`,
+        type: "account_onboarding",
+      });
+
+      res.json({ url: accountLink.url });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.get("/api/contractor/payouts/dashboard-link", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const onboarding = await storage.getContractorOnboarding(userId);
+      if (!onboarding?.stripeAccountId) return res.status(400).json({ message: "No Stripe account connected" });
+
+      const stripe = await getUncachableStripeClient();
+      const loginLink = await stripe.accounts.createLoginLink(onboarding.stripeAccountId);
+      res.json({ url: loginLink.url });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
   // === CONTRACTOR APPLICATIONS (PUBLIC) ===
   app.post("/api/contractor-applications", async (req, res) => {
     try {
