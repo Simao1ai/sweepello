@@ -1,0 +1,114 @@
+import sgMail from '@sendgrid/mail';
+
+async function getCredentials() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? 'repl ' + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL
+    : null;
+
+  if (!xReplitToken) throw new Error('X-Replit-Token not found for repl/depl');
+
+  const data = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=sendgrid',
+    { headers: { 'Accept': 'application/json', 'X-Replit-Token': xReplitToken } }
+  ).then(res => res.json()).then(d => d.items?.[0]);
+
+  if (!data || !data.settings.api_key || !data.settings.from_email) {
+    throw new Error('SendGrid not connected');
+  }
+  return { apiKey: data.settings.api_key, fromEmail: data.settings.from_email };
+}
+
+export async function getUncachableSendGridClient() {
+  const { apiKey, fromEmail } = await getCredentials();
+  sgMail.setApiKey(apiKey);
+  return { client: sgMail, fromEmail };
+}
+
+export async function sendApplicationApprovedEmail(to: string, name: string) {
+  try {
+    const { client, fromEmail } = await getUncachableSendGridClient();
+    await client.send({
+      to,
+      from: fromEmail,
+      subject: 'Your CleanSlate Contractor Application Has Been Approved!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #10b981; padding: 24px; text-align: center;">
+            <h1 style="color: white; margin: 0;">CleanSlate</h1>
+            <p style="color: #d1fae5; margin: 4px 0 0;">NJ Shore Cleaning Services</p>
+          </div>
+          <div style="padding: 32px; background: #fff;">
+            <h2 style="color: #111827;">Congratulations, ${name}!</h2>
+            <p style="color: #374151; line-height: 1.6;">
+              We're thrilled to let you know that your contractor application has been <strong>approved</strong>. 
+              You're now part of the CleanSlate network!
+            </p>
+            <p style="color: #374151; line-height: 1.6;">
+              To get started, visit our website and sign in with the email address you used to apply. 
+              You'll be guided through our onboarding process to set up your profile, sign your agreement, 
+              and connect your payout account.
+            </p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="https://cleanslate.replit.app" 
+                 style="background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; 
+                        text-decoration: none; font-weight: bold; display: inline-block;">
+                Get Started →
+              </a>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">
+              If you have any questions, simply reply to this email and we'll be happy to help.
+            </p>
+          </div>
+          <div style="background: #f9fafb; padding: 16px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">CleanSlate — NJ Shore Market</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('SendGrid error (approved):', err);
+  }
+}
+
+export async function sendApplicationRejectedEmail(to: string, name: string, note?: string) {
+  try {
+    const { client, fromEmail } = await getUncachableSendGridClient();
+    await client.send({
+      to,
+      from: fromEmail,
+      subject: 'Update on Your CleanSlate Contractor Application',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #4f46e5; padding: 24px; text-align: center;">
+            <h1 style="color: white; margin: 0;">CleanSlate</h1>
+            <p style="color: #e0e7ff; margin: 4px 0 0;">NJ Shore Cleaning Services</p>
+          </div>
+          <div style="padding: 32px; background: #fff;">
+            <h2 style="color: #111827;">Hi ${name},</h2>
+            <p style="color: #374151; line-height: 1.6;">
+              Thank you for your interest in joining the CleanSlate network. After careful review, 
+              we are unable to approve your contractor application at this time.
+            </p>
+            ${note ? `
+            <div style="background: #f9fafb; border-left: 4px solid #d1d5db; padding: 16px; margin: 16px 0;">
+              <p style="color: #374151; margin: 0; font-style: italic;">${note}</p>
+            </div>
+            ` : ''}
+            <p style="color: #374151; line-height: 1.6;">
+              We encourage you to reapply in the future as our needs and capacity evolve. 
+              We appreciate your time and interest.
+            </p>
+          </div>
+          <div style="background: #f9fafb; padding: 16px; text-align: center;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">CleanSlate — NJ Shore Market</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error('SendGrid error (rejected):', err);
+  }
+}

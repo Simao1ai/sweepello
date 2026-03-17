@@ -6,11 +6,12 @@ import {
   insertClientSchema, insertCleanerSchema, insertJobSchema,
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
-  insertContractorOnboardingSchema,
+  insertContractorOnboardingSchema, insertContractorApplicationSchema, insertDisputeSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { sendApplicationApprovedEmail, sendApplicationRejectedEmail } from "./sendgrid";
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -924,6 +925,205 @@ export async function registerRoutes(
     } catch (err: unknown) {
       res.status(500).json({ message: "Stripe not configured" });
     }
+  });
+
+  // === CONTRACTOR APPLICATIONS (PUBLIC) ===
+  app.post("/api/contractor-applications", async (req, res) => {
+    try {
+      const validated = insertContractorApplicationSchema.parse(req.body);
+      const existing = await storage.getContractorApplicationByEmail(validated.email);
+      if (existing && existing.status === "pending") {
+        return res.status(400).json({ message: "An application with this email is already pending review." });
+      }
+      const application = await storage.createContractorApplication(validated);
+      res.json(application);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === ADMIN: CONTRACTOR APPLICATIONS ===
+  app.get("/api/admin/contractor-applications", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+    const applications = await storage.getContractorApplications();
+    res.json(applications);
+  });
+
+  app.patch("/api/admin/contractor-applications/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { id } = req.params;
+      const { status, adminNote } = req.body;
+      const application = await storage.getContractorApplication(id);
+      if (!application) return res.status(404).json({ message: "Application not found" });
+
+      const updated = await storage.updateContractorApplication(id, {
+        status,
+        adminNote,
+        reviewedAt: new Date(),
+      });
+
+      if (status === "approved") {
+        await sendApplicationApprovedEmail(application.email, application.firstName);
+      } else if (status === "rejected") {
+        await sendApplicationRejectedEmail(application.email, application.firstName, adminNote);
+      }
+
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: REVIEW MODERATION ===
+  app.get("/api/admin/reviews", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+    const allReviews = await storage.getReviews();
+    res.json(allReviews);
+  });
+
+  app.patch("/api/admin/reviews/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { id } = req.params;
+      const { moderationStatus, adminNote, comment, rating } = req.body;
+      const updated = await storage.updateReview(id, { moderationStatus, adminNote, comment, rating });
+      if (!updated) return res.status(404).json({ message: "Review not found" });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: CONTRACTOR STATUS MANAGEMENT ===
+  app.patch("/api/admin/cleaners/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { id } = req.params;
+      const { status, statusNote, isFeatured, adminNote } = req.body;
+      const updated = await storage.updateCleaner(id, { status, statusNote, isFeatured, adminNote });
+      if (!updated) return res.status(404).json({ message: "Cleaner not found" });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: CLIENT MANAGEMENT ===
+  app.patch("/api/admin/clients/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { id } = req.params;
+      const { isActive, isVip, adminNote } = req.body;
+      const updated = await storage.updateClient(id, { isActive, isVip, adminNote });
+      if (!updated) return res.status(404).json({ message: "Client not found" });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: DISPUTES ===
+  app.get("/api/admin/disputes", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+    const allDisputes = await storage.getDisputes();
+    res.json(allDisputes);
+  });
+
+  app.post("/api/admin/disputes", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const validated = insertDisputeSchema.parse({ ...req.body, reportedByUserId: userId });
+      const dispute = await storage.createDispute(validated);
+      res.json(dispute);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  app.patch("/api/admin/disputes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { id } = req.params;
+      const { status, adminNote, resolutionNote } = req.body;
+      const resolvedAt = status === "resolved" ? new Date() : undefined;
+      const updated = await storage.updateDispute(id, { status, adminNote, resolutionNote, ...(resolvedAt ? { resolvedAt } : {}) });
+      if (!updated) return res.status(404).json({ message: "Dispute not found" });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: BULK NOTIFICATIONS ===
+  app.post("/api/admin/notifications/broadcast", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+      const { title, message, targetRole } = req.body;
+      if (!title || !message || !targetRole) {
+        return res.status(400).json({ message: "title, message, and targetRole are required" });
+      }
+
+      const allProfiles = await storage.getAllUserProfiles();
+      const targets = allProfiles.filter(p => p.role === targetRole);
+      const created = await Promise.all(targets.map(p =>
+        storage.createNotification({ userId: p.userId, title, message, type: "broadcast" })
+      ));
+      res.json({ sent: created.length });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: CONTRACTOR ALERTS ===
+  app.get("/api/admin/alerts", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+
+    const allCleaners = await storage.getCleaners();
+    const atRisk = allCleaners.filter(c => {
+      const rating = Number(c.rating);
+      return c.status === "active" && rating > 0 && rating < 4.0;
+    });
+    res.json({ atRisk });
+  });
+
+  // === CLIENT: REVIEW CLIENT HISTORY (ADMIN) ===
+  app.get("/api/admin/client-reviews/:clientId", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+    const allReviews = await storage.getReviews();
+    const filtered = allReviews.filter(r => r.clientId === req.params.clientId);
+    res.json(filtered);
   });
 
   return httpServer;

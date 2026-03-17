@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -30,6 +30,11 @@ import ContractorJobs from "@/pages/contractor-jobs";
 import ContractorAvailability from "@/pages/contractor-availability";
 import ContractorNotifications from "@/pages/contractor-notifications";
 import ContractorOnboarding from "@/pages/contractor-onboarding";
+import ContractorApply from "@/pages/contractor-apply";
+import Applications from "@/pages/admin/applications";
+import ReviewModeration from "@/pages/admin/review-moderation";
+import Disputes from "@/pages/admin/disputes";
+import Broadcast from "@/pages/admin/broadcast";
 import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } from "@shared/schema";
 
 function AuthenticatedApp() {
@@ -90,6 +95,10 @@ function AdminApp({ user }: { user: any }) {
               <Route path="/admin/clients" component={Clients} />
               <Route path="/admin/payments" component={Payments} />
               <Route path="/admin/analytics" component={Analytics} />
+              <Route path="/admin/applications" component={Applications} />
+              <Route path="/admin/reviews" component={ReviewModeration} />
+              <Route path="/admin/disputes" component={Disputes} />
+              <Route path="/admin/broadcast" component={Broadcast} />
               <Route component={NotFound} />
             </Switch>
           </main>
@@ -202,6 +211,11 @@ function App() {
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  const [location] = useLocation();
+
+  if (location === "/apply") {
+    return <ContractorApply />;
+  }
 
   if (isLoading) {
     return (
@@ -216,7 +230,12 @@ function AppContent() {
   }
 
   if (!user) {
-    return <Landing />;
+    return (
+      <Switch>
+        <Route path="/apply" component={ContractorApply} />
+        <Route component={Landing} />
+      </Switch>
+    );
   }
 
   return <AuthenticatedApp />;

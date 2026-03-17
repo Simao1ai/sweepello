@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -13,6 +13,8 @@ import {
   type Notification, type InsertNotification,
   type JobOffer, type InsertJobOffer,
   type ContractorOnboarding, type InsertContractorOnboarding,
+  type ContractorApplication, type InsertContractorApplication,
+  type Dispute, type InsertDispute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -20,6 +22,7 @@ export interface IStorage {
   getClient(id: string): Promise<Client | undefined>;
   getClientByUserId(userId: string): Promise<Client | undefined>;
   createClient(data: InsertClient): Promise<Client>;
+  updateClient(id: string, data: Partial<Client>): Promise<Client | undefined>;
 
   getCleaners(): Promise<Cleaner[]>;
   getCleaner(id: string): Promise<Cleaner | undefined>;
@@ -38,6 +41,7 @@ export interface IStorage {
   getReviews(): Promise<Review[]>;
   getReviewByJobId(jobId: string): Promise<Review | undefined>;
   createReview(data: InsertReview): Promise<Review>;
+  updateReview(id: string, data: Partial<Review>): Promise<Review | undefined>;
 
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   createUserProfile(data: InsertUserProfile): Promise<UserProfile>;
@@ -68,10 +72,24 @@ export interface IStorage {
   updateJobOffer(id: string, data: Partial<JobOffer>): Promise<JobOffer | undefined>;
 
   getReviewsByCleanerId(cleanerId: string): Promise<Review[]>;
+  getReviewsByUserId(userId: string): Promise<Review[]>;
+
+  getAllUserProfiles(): Promise<UserProfile[]>;
 
   getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined>;
   createContractorOnboarding(data: InsertContractorOnboarding): Promise<ContractorOnboarding>;
   updateContractorOnboarding(userId: string, data: Partial<ContractorOnboarding>): Promise<ContractorOnboarding | undefined>;
+
+  getContractorApplications(): Promise<ContractorApplication[]>;
+  getContractorApplication(id: string): Promise<ContractorApplication | undefined>;
+  getContractorApplicationByEmail(email: string): Promise<ContractorApplication | undefined>;
+  createContractorApplication(data: InsertContractorApplication): Promise<ContractorApplication>;
+  updateContractorApplication(id: string, data: Partial<ContractorApplication>): Promise<ContractorApplication | undefined>;
+
+  getDisputes(): Promise<Dispute[]>;
+  getDispute(id: string): Promise<Dispute | undefined>;
+  createDispute(data: InsertDispute): Promise<Dispute>;
+  updateDispute(id: string, data: Partial<Dispute>): Promise<Dispute | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -91,6 +109,11 @@ export class DatabaseStorage implements IStorage {
 
   async createClient(data: InsertClient): Promise<Client> {
     const [client] = await db.insert(clients).values(data).returning();
+    return client;
+  }
+
+  async updateClient(id: string, data: Partial<Client>): Promise<Client | undefined> {
+    const [client] = await db.update(clients).set(data).where(eq(clients.id, id)).returning();
     return client;
   }
 
@@ -130,11 +153,7 @@ export class DatabaseStorage implements IStorage {
     const price = Number(data.price);
     const cleanerPay = data.cleanerPay ? Number(data.cleanerPay) : null;
     const profit = cleanerPay ? (price - cleanerPay).toFixed(2) : null;
-
-    const [job] = await db.insert(jobs).values({
-      ...data,
-      profit,
-    }).returning();
+    const [job] = await db.insert(jobs).values({ ...data, profit }).returning();
     return job;
   }
 
@@ -163,6 +182,11 @@ export class DatabaseStorage implements IStorage {
 
   async createReview(data: InsertReview): Promise<Review> {
     const [review] = await db.insert(reviews).values(data).returning();
+    return review;
+  }
+
+  async updateReview(id: string, data: Partial<Review>): Promise<Review | undefined> {
+    const [review] = await db.update(reviews).set({ ...data, adminModifiedAt: new Date() }).where(eq(reviews.id, id)).returning();
     return review;
   }
 
@@ -244,9 +268,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markAllNotificationsRead(userId: string): Promise<void> {
-    await db.update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.userId, userId));
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
   }
 
   async getJobOffersByServiceRequest(serviceRequestId: string): Promise<JobOffer[]> {
@@ -276,6 +298,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(reviews).where(eq(reviews.cleanerId, cleanerId));
   }
 
+  async getReviewsByUserId(userId: string): Promise<Review[]> {
+    return db.select().from(reviews).where(eq(reviews.userId, userId));
+  }
+
+  async getAllUserProfiles(): Promise<UserProfile[]> {
+    return db.select().from(userProfiles);
+  }
+
   async getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined> {
     const [onboarding] = await db.select().from(contractorOnboarding).where(eq(contractorOnboarding.userId, userId));
     return onboarding;
@@ -292,6 +322,49 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contractorOnboarding.userId, userId))
       .returning();
     return onboarding;
+  }
+
+  async getContractorApplications(): Promise<ContractorApplication[]> {
+    return db.select().from(contractorApplications);
+  }
+
+  async getContractorApplication(id: string): Promise<ContractorApplication | undefined> {
+    const [app] = await db.select().from(contractorApplications).where(eq(contractorApplications.id, id));
+    return app;
+  }
+
+  async getContractorApplicationByEmail(email: string): Promise<ContractorApplication | undefined> {
+    const [app] = await db.select().from(contractorApplications).where(eq(contractorApplications.email, email));
+    return app;
+  }
+
+  async createContractorApplication(data: InsertContractorApplication): Promise<ContractorApplication> {
+    const [app] = await db.insert(contractorApplications).values(data).returning();
+    return app;
+  }
+
+  async updateContractorApplication(id: string, data: Partial<ContractorApplication>): Promise<ContractorApplication | undefined> {
+    const [app] = await db.update(contractorApplications).set(data).where(eq(contractorApplications.id, id)).returning();
+    return app;
+  }
+
+  async getDisputes(): Promise<Dispute[]> {
+    return db.select().from(disputes);
+  }
+
+  async getDispute(id: string): Promise<Dispute | undefined> {
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, id));
+    return dispute;
+  }
+
+  async createDispute(data: InsertDispute): Promise<Dispute> {
+    const [dispute] = await db.insert(disputes).values(data).returning();
+    return dispute;
+  }
+
+  async updateDispute(id: string, data: Partial<Dispute>): Promise<Dispute | undefined> {
+    const [dispute] = await db.update(disputes).set(data).where(eq(disputes.id, id)).returning();
+    return dispute;
   }
 }
 

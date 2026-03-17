@@ -17,6 +17,10 @@ import {
   HardHat,
   TrendingUp,
   DollarSign,
+  UserPlus,
+  Star,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +49,10 @@ const adminNavItems = [
   { title: "Clients", url: "/admin/clients", icon: Building2 },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
+  { title: "Applications", url: "/admin/applications", icon: UserPlus },
+  { title: "Reviews", url: "/admin/reviews", icon: Star },
+  { title: "Disputes", url: "/admin/disputes", icon: AlertTriangle },
+  { title: "Broadcast", url: "/admin/broadcast", icon: Send },
 ];
 
 const clientNavItems = [

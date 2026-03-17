@@ -258,22 +258,32 @@ export default function Landing() {
                 </CardContent>
               </Card>
             </a>
-            <a href="/api/login" data-testid="portal-contractor">
-              <Card className="bg-background hover:shadow-lg hover:border-emerald-500/40 transition-all cursor-pointer border-2 h-full">
-                <CardContent className="pt-8 pb-6 text-center space-y-4">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-                    <HardHat className="h-8 w-8 text-emerald-600" />
-                  </div>
-                  <h3 className="font-semibold text-xl">Contractor Portal</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    View and accept job offers, manage your availability, update job progress, and get paid.
-                  </p>
-                  <Button variant="outline" className="gap-2 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950">
-                    <LogIn className="h-4 w-4" /> Sign In as Contractor
-                  </Button>
-                </CardContent>
-              </Card>
-            </a>
+            <div className="flex flex-col gap-3">
+              <a href="/api/login" data-testid="portal-contractor">
+                <Card className="bg-background hover:shadow-lg hover:border-emerald-500/40 transition-all cursor-pointer border-2 h-full">
+                  <CardContent className="pt-8 pb-6 text-center space-y-4">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+                      <HardHat className="h-8 w-8 text-emerald-600" />
+                    </div>
+                    <h3 className="font-semibold text-xl">Contractor Portal</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      View and accept job offers, manage your availability, update job progress, and get paid.
+                    </p>
+                    <Button variant="outline" className="gap-2 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950">
+                      <LogIn className="h-4 w-4" /> Sign In as Contractor
+                    </Button>
+                  </CardContent>
+                </Card>
+              </a>
+              <a href="/apply" data-testid="link-apply-contractor">
+                <Card className="bg-emerald-50 dark:bg-emerald-950/40 hover:shadow-md transition-all cursor-pointer border border-emerald-200 dark:border-emerald-800">
+                  <CardContent className="py-4 text-center">
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">New to CleanSlate?</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Apply to join our contractor network →</p>
+                  </CardContent>
+                </Card>
+              </a>
+            </div>
             <a href="/api/login" data-testid="portal-admin">
               <Card className="bg-background hover:shadow-lg hover:border-blue-500/40 transition-all cursor-pointer border-2 h-full">
                 <CardContent className="pt-8 pb-6 text-center space-y-4">
