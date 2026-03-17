@@ -186,7 +186,7 @@ export default function Applications() {
         {/* PORTAL ACCOUNTS TAB */}
         <TabsContent value="portal-accounts" className="mt-4 space-y-4">
           <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 border">
-            These are contractors who created a CleanSlate account and selected "I'm a Cleaner." They're waiting for your approval before they can access the portal and begin onboarding.
+            These are contractors who created a Sweepello account and selected "I'm a Cleaner." They're waiting for your approval before they can access the portal and begin onboarding.
           </div>
 
           {pendingLoading ? (

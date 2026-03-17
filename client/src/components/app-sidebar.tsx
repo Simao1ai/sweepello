@@ -150,12 +150,14 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
       <SidebarHeader className="p-4">
         <Link href={defaultPath} data-testid="link-home">
           <div className="flex items-center gap-2">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-md ${config.accentClass}`}>
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
             <div>
-              <h2 className="text-sm font-semibold tracking-tight">CleanSlate</h2>
-              <p className="text-xs text-muted-foreground">{config.sublabel}</p>
+              <h2
+                className="text-lg font-bold leading-none sweepello-gradient"
+                style={{ fontFamily: "'Pacifico', cursive" }}
+              >
+                Sweepello
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{config.sublabel}</p>
             </div>
           </div>
         </Link>

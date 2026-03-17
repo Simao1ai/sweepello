@@ -24,10 +24,12 @@ export default function Landing() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">CleanSlate</span>
+            <span
+              className="text-2xl font-bold sweepello-gradient"
+              style={{ fontFamily: "'Pacifico', cursive" }}
+            >
+              Sweepello
+            </span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#services" className="hover:text-foreground transition-colors">Services</a>
@@ -163,7 +165,7 @@ export default function Landing() {
       <section id="features" className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif font-bold">Why Choose CleanSlate?</h2>
+            <h2 className="text-3xl font-serif font-bold">Why Choose Sweepello?</h2>
             <p className="mt-3 text-muted-foreground">Built for reliability, transparency, and quality</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -278,7 +280,7 @@ export default function Landing() {
               <a href="/apply" data-testid="link-apply-contractor">
                 <Card className="bg-emerald-50 dark:bg-emerald-950/40 hover:shadow-md transition-all cursor-pointer border border-emerald-200 dark:border-emerald-800">
                   <CardContent className="py-4 text-center">
-                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">New to CleanSlate?</p>
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">New to Sweepello?</p>
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Apply to join our contractor network →</p>
                   </CardContent>
                 </Card>
@@ -311,9 +313,9 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">CleanSlate</span>
+            <span className="text-sm font-medium">Sweepello</span>
           </div>
-          <p className="text-xs text-muted-foreground">&copy; 2026 CleanSlate. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">&copy; 2026 Sweepello. All rights reserved.</p>
         </div>
       </footer>
     </div>

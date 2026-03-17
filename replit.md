@@ -1,4 +1,4 @@
-# CleanSlate - Cleaning Dispatch Platform
+# Sweepello - Cleaning Dispatch Platform
 
 ## Overview
 A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business in the NJ Shore market. Features a triple-portal architecture:

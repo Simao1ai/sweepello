@@ -33,18 +33,18 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
     await client.send({
       to,
       from: fromEmail,
-      subject: 'Your CleanSlate Contractor Application Has Been Approved!',
+      subject: 'Your Sweepello Contractor Application Has Been Approved!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #10b981; padding: 24px; text-align: center;">
-            <h1 style="color: white; margin: 0;">CleanSlate</h1>
-            <p style="color: #d1fae5; margin: 4px 0 0;">NJ Shore Cleaning Services</p>
+          <div style="background: linear-gradient(90deg, #0099FF, #44CC00); padding: 28px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Sweepello</h1>
+            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">NJ Shore Cleaning Services</p>
           </div>
           <div style="padding: 32px; background: #fff;">
             <h2 style="color: #111827;">Congratulations, ${name}!</h2>
             <p style="color: #374151; line-height: 1.6;">
               We're thrilled to let you know that your contractor application has been <strong>approved</strong>. 
-              You're now part of the CleanSlate network!
+              Welcome to the Sweepello network!
             </p>
             <p style="color: #374151; line-height: 1.6;">
               To get started, visit our website and sign in with the email address you used to apply. 
@@ -52,8 +52,8 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
               and connect your payout account.
             </p>
             <div style="text-align: center; margin: 32px 0;">
-              <a href="https://cleanslate.replit.app" 
-                 style="background: #10b981; color: white; padding: 14px 28px; border-radius: 8px; 
+              <a href="https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'sweepello.replit.app'}" 
+                 style="background: linear-gradient(90deg, #0099FF, #44CC00); color: white; padding: 14px 28px; border-radius: 8px; 
                         text-decoration: none; font-weight: bold; display: inline-block;">
                 Get Started →
               </a>
@@ -63,7 +63,7 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
             </p>
           </div>
           <div style="background: #f9fafb; padding: 16px; text-align: center;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">CleanSlate — NJ Shore Market</p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — NJ Shore Market</p>
           </div>
         </div>
       `,
@@ -79,17 +79,17 @@ export async function sendApplicationRejectedEmail(to: string, name: string, not
     await client.send({
       to,
       from: fromEmail,
-      subject: 'Update on Your CleanSlate Contractor Application',
+      subject: 'Update on Your Sweepello Contractor Application',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #4f46e5; padding: 24px; text-align: center;">
-            <h1 style="color: white; margin: 0;">CleanSlate</h1>
-            <p style="color: #e0e7ff; margin: 4px 0 0;">NJ Shore Cleaning Services</p>
+          <div style="background: linear-gradient(90deg, #0099FF, #44CC00); padding: 28px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Sweepello</h1>
+            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">NJ Shore Cleaning Services</p>
           </div>
           <div style="padding: 32px; background: #fff;">
             <h2 style="color: #111827;">Hi ${name},</h2>
             <p style="color: #374151; line-height: 1.6;">
-              Thank you for your interest in joining the CleanSlate network. After careful review, 
+              Thank you for your interest in joining the Sweepello network. After careful review, 
               we are unable to approve your contractor application at this time.
             </p>
             ${note ? `
@@ -103,7 +103,7 @@ export async function sendApplicationRejectedEmail(to: string, name: string, not
             </p>
           </div>
           <div style="background: #f9fafb; padding: 16px; text-align: center;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">CleanSlate — NJ Shore Market</p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — NJ Shore Market</p>
           </div>
         </div>
       `,

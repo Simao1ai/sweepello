@@ -113,7 +113,7 @@ export default function ContractorPayouts() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {isFullyConnected
-                      ? "Your bank account is set up. CleanSlate will transfer your earnings directly."
+                      ? "Your bank account is set up. Sweepello will transfer your earnings directly."
                       : stripe?.connected
                       ? "Finish setting up your Stripe account to receive payouts."
                       : "Connect your bank account to receive direct deposit payouts after each job."}
@@ -219,7 +219,7 @@ export default function ContractorPayouts() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Percent className="h-4 w-4 text-muted-foreground" />
-            How CleanSlate Payouts Work
+            How Sweepello Payouts Work
           </CardTitle>
           <CardDescription>Transparent brokerage model — you always see exactly how it's split</CardDescription>
         </CardHeader>
@@ -236,7 +236,7 @@ export default function ContractorPayouts() {
             </div>
             <div className="flex-1 bg-indigo-50 dark:bg-indigo-950/30 p-4 text-center border-y border-indigo-200 dark:border-indigo-800">
               <Percent className="h-6 w-6 text-indigo-600 mx-auto mb-1" />
-              <p className="text-xs text-muted-foreground mb-1">CleanSlate retains</p>
+              <p className="text-xs text-muted-foreground mb-1">Sweepello retains</p>
               <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">30%</p>
               <p className="text-xs text-indigo-600 dark:text-indigo-400">Dispatch & platform fee</p>
             </div>
@@ -326,7 +326,7 @@ export default function ContractorPayouts() {
       {/* Tax Note */}
       <div className="rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground space-y-1">
         <p className="font-medium text-foreground">Tax Information</p>
-        <p>As an independent 1099 contractor, you are responsible for your own taxes. CleanSlate does not withhold taxes from your payouts. You will receive a 1099-NEC form if your total earnings exceed $600 in a calendar year.</p>
+        <p>As an independent 1099 contractor, you are responsible for your own taxes. Sweepello does not withhold taxes from your payouts. You will receive a 1099-NEC form if your total earnings exceed $600 in a calendar year.</p>
         <p>We recommend setting aside 25–30% of your earnings for federal and state taxes. Consult a tax professional for personalized advice.</p>
       </div>
     </div>

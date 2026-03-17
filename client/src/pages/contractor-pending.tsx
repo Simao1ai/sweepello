@@ -29,12 +29,15 @@ export default function ContractorPending() {
 
         {/* Icon + Brand */}
         <div className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg">
-              <HardHat className="h-7 w-7 text-white" />
-            </div>
+          <div className="flex items-center justify-center mb-4">
+            <span
+              className="text-4xl font-bold sweepello-gradient"
+              style={{ fontFamily: "'Pacifico', cursive" }}
+            >
+              Sweepello
+            </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             {isRejected ? "Application Not Approved" : "Application Under Review"}
           </h1>
           <p className="mt-2 text-muted-foreground">
@@ -58,8 +61,8 @@ export default function ContractorPending() {
                 </div>
                 <div className="bg-red-100 dark:bg-red-950/40 rounded-lg p-4 text-sm text-red-800 dark:text-red-300">
                   If you believe this was an error or have questions, please contact us at{" "}
-                  <a href="mailto:support@cleanslate.com" className="font-semibold underline">
-                    support@cleanslate.com
+                  <a href="mailto:support@sweepello.com" className="font-semibold underline">
+                    support@sweepello.com
                   </a>
                 </div>
               </div>
@@ -125,8 +128,8 @@ export default function ContractorPending() {
 
         <p className="text-center text-xs text-muted-foreground">
           Questions? Contact us at{" "}
-          <a href="mailto:support@cleanslate.com" className="underline hover:text-foreground">
-            support@cleanslate.com
+          <a href="mailto:support@sweepello.com" className="underline hover:text-foreground">
+            support@sweepello.com
           </a>
         </p>
       </div>

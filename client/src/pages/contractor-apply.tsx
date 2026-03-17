@@ -108,7 +108,7 @@ export default function ContractorApply() {
             </div>
             <h2 className="text-2xl font-bold">Application Submitted!</h2>
             <p className="text-muted-foreground">
-              Thank you for applying to join the CleanSlate network. Our team will review your application and reach out to you via email within 3–5 business days.
+              Thank you for applying to join the Sweepello network. Our team will review your application and reach out to you via email within 3–5 business days.
             </p>
             <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
               Status: Under Review
@@ -131,11 +131,13 @@ export default function ContractorApply() {
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8 pt-8">
           <Link href="/">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-emerald-600">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold">CleanSlate</span>
+            <div className="flex items-center justify-center mb-4">
+              <span
+                className="text-4xl font-bold sweepello-gradient"
+                style={{ fontFamily: "'Pacifico', cursive" }}
+              >
+                Sweepello
+              </span>
             </div>
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Contractor Application</h1>
@@ -326,11 +328,11 @@ export default function ContractorApply() {
                     <p className="font-semibold">Independent Contractor Acknowledgment</p>
                     <p>By submitting this application, you acknowledge and understand that:</p>
                     <ul className="list-disc pl-5 space-y-1">
-                      <li>You will operate as an <strong>independent contractor</strong>, not an employee of CleanSlate.</li>
+                      <li>You will operate as an <strong>independent contractor</strong>, not an employee of Sweepello.</li>
                       <li>You are responsible for your own taxes as a 1099 contractor.</li>
-                      <li>CleanSlate acts as a <strong>dispatch broker</strong> connecting you with clients.</li>
+                      <li>Sweepello acts as a <strong>dispatch broker</strong> connecting you with clients.</li>
                       <li>You are free to accept or decline any job offers.</li>
-                      <li>Your approval is not guaranteed and CleanSlate reserves the right to reject any application.</li>
+                      <li>Your approval is not guaranteed and Sweepello reserves the right to reject any application.</li>
                       <li>Approved contractors will complete a full onboarding process including a W-9 and subcontractor agreement before receiving any assignments.</li>
                     </ul>
                   </div>

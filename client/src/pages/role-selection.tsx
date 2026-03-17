@@ -29,7 +29,7 @@ export default function RoleSelection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      toast({ title: "Welcome to CleanSlate!" });
+      toast({ title: "Welcome to Sweepello!" });
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
@@ -40,16 +40,19 @@ export default function RoleSelection() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-3xl space-y-8">
         <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
-            </div>
+          <div className="flex items-center justify-center mb-2">
+            <span
+              className="text-4xl font-bold sweepello-gradient"
+              style={{ fontFamily: "'Pacifico', cursive" }}
+            >
+              Sweepello
+            </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-role-title">
-            Welcome to CleanSlate
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-role-title">
+            Welcome! How would you like to join?
           </h1>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            How would you like to use the platform?
+            Choose your role to get started on the platform.
           </p>
         </div>
 

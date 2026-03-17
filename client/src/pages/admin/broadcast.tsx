@@ -17,7 +17,7 @@ const TARGETS = [
 
 const TEMPLATES = [
   { label: "Holiday Reminder", title: "Holiday Availability Update", message: "As the holiday season approaches, please update your availability schedule to reflect any days you'll be unavailable. This helps us ensure smooth scheduling for our clients." },
-  { label: "Expansion Announcement", title: "We're Expanding!", message: "Exciting news! CleanSlate is expanding to new areas in the NJ Shore market. Stay tuned for more job opportunities coming your way." },
+  { label: "Expansion Announcement", title: "We're Expanding!", message: "Exciting news! Sweepello is expanding to new areas in the NJ Shore market. Stay tuned for more job opportunities coming your way." },
   { label: "Policy Update", title: "Important Policy Update", message: "We've updated our service policies. Please log in to your portal to review the latest changes. Questions? Reply to any notification or contact us directly." },
   { label: "Quality Reminder", title: "Quality Service Reminder", message: "Thank you for your continued professionalism. As a reminder, our clients expect top-quality service. Please ensure you're following all cleaning checklists and communicating any issues promptly." },
 ];
