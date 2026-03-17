@@ -901,7 +901,7 @@ export async function registerRoutes(
           name: onboarding.fullName,
           email: onboarding.email,
           phone: onboarding.phone,
-          payRate: "25.00",
+          payRate: 70,
           status: "active",
           rating: "0",
           onTimePercent: "100",
