@@ -2,14 +2,17 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, Clock, Users, Phone, Mail, MapPin, Calendar, Shield, Package, ChevronDown, ChevronUp, Bookmark } from "lucide-react";
-import type { ContractorApplication } from "@shared/schema";
+import {
+  CheckCircle, XCircle, Clock, Users, Phone, Mail, MapPin, Calendar,
+  Shield, Package, ChevronDown, ChevronUp, Bookmark, UserCheck, AlertCircle,
+} from "lucide-react";
+import type { ContractorApplication, UserProfile } from "@shared/schema";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
@@ -24,8 +27,15 @@ export default function Applications() {
   const [actionModal, setActionModal] = useState<{ app: ContractorApplication; action: string } | null>(null);
   const [adminNote, setAdminNote] = useState("");
 
+  const [rejectModal, setRejectModal] = useState<{ userId: string; name: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const { data: applications = [], isLoading } = useQuery<ContractorApplication[]>({
     queryKey: ["/api/admin/contractor-applications"],
+  });
+
+  const { data: pendingAccounts = [], isLoading: pendingLoading } = useQuery<UserProfile[]>({
+    queryKey: ["/api/admin/pending-contractors"],
   });
 
   const updateMutation = useMutation({
@@ -40,12 +50,36 @@ export default function Applications() {
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("POST", `/api/admin/pending-contractors/${userId}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-contractors"] });
+      toast({ title: "Contractor approved!", description: "They can now access the contractor portal. Approval email sent." });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      apiRequest("POST", `/api/admin/pending-contractors/${userId}/reject`, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-contractors"] });
+      toast({ title: "Account rejected", description: "Rejection email sent to the contractor." });
+      setRejectModal(null);
+      setRejectReason("");
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const handleAction = () => {
     if (!actionModal) return;
     updateMutation.mutate({ id: actionModal.app.id, status: actionModal.action, note: adminNote });
   };
 
   const byStatus = (status: string) => applications.filter(a => a.status === status);
+
+  const pendingCount = pendingAccounts.filter(p => (p as any).approvalStatus === "pending").length;
+  const rejectedCount = pendingAccounts.filter(p => (p as any).approvalStatus === "rejected").length;
 
   const AppCard = ({ app }: { app: ContractorApplication }) => {
     const isExpanded = expandedId === app.id;
@@ -119,37 +153,118 @@ export default function Applications() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Contractor Applications</h1>
-        <p className="text-muted-foreground">Review and manage incoming contractor applications</p>
+        <p className="text-muted-foreground">Review and manage contractor applications and pending accounts</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Pending", count: counts.pending, icon: Clock, color: "text-yellow-600" },
-          { label: "Approved", count: counts.approved, icon: CheckCircle, color: "text-emerald-600" },
-          { label: "Waitlisted", count: counts.waitlisted, icon: Bookmark, color: "text-blue-600" },
-          { label: "Rejected", count: counts.rejected, icon: XCircle, color: "text-red-500" },
-        ].map(s => (
-          <Card key={s.label} data-testid={`card-stat-${s.label.toLowerCase()}`}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-3">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
-                <div>
-                  <p className="text-2xl font-bold">{s.count}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Pending portal accounts alert */}
+      {pendingCount > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4" data-testid="banner-pending-accounts">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-amber-900 dark:text-amber-100 text-sm">
+              {pendingCount} contractor account{pendingCount !== 1 ? "s" : ""} waiting for approval
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+              These contractors signed up through the portal and are waiting for your review before they can access their dashboard.
+            </p>
+          </div>
+        </div>
+      )}
 
-      <Tabs defaultValue="pending">
-        <TabsList>
-          <TabsTrigger value="pending" data-testid="tab-pending">Pending ({counts.pending})</TabsTrigger>
+      <Tabs defaultValue="portal-accounts">
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="portal-accounts" data-testid="tab-portal-accounts">
+            <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+            Portal Accounts ({pendingCount})
+          </TabsTrigger>
+          <TabsTrigger value="pending" data-testid="tab-pending">Public Applications ({counts.pending})</TabsTrigger>
           <TabsTrigger value="approved" data-testid="tab-approved">Approved ({counts.approved})</TabsTrigger>
           <TabsTrigger value="waitlisted" data-testid="tab-waitlisted">Waitlisted ({counts.waitlisted})</TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-rejected">Rejected ({counts.rejected})</TabsTrigger>
         </TabsList>
+
+        {/* PORTAL ACCOUNTS TAB */}
+        <TabsContent value="portal-accounts" className="mt-4 space-y-4">
+          <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 border">
+            These are contractors who created a CleanSlate account and selected "I'm a Cleaner." They're waiting for your approval before they can access the portal and begin onboarding.
+          </div>
+
+          {pendingLoading ? (
+            <p className="text-muted-foreground">Loading...</p>
+          ) : pendingAccounts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p>No pending contractor accounts</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingAccounts.map((account: any) => (
+                <Card key={account.userId} className="hover:shadow-md transition-shadow" data-testid={`card-account-${account.userId}`}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold" data-testid={`text-account-id-${account.userId}`}>
+                            Contractor Account
+                          </p>
+                          <Badge className={account.approvalStatus === "rejected" ? STATUS_COLORS.rejected : STATUS_COLORS.pending}>
+                            {account.approvalStatus || "pending"}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Signed up {account.createdAt ? new Date(account.createdAt).toLocaleDateString() : "—"}
+                          </span>
+                          <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">ID: {account.userId}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 shrink-0">
+                        {account.approvalStatus !== "rejected" && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => approveMutation.mutate(account.userId)}
+                            disabled={approveMutation.isPending}
+                            data-testid={`button-approve-account-${account.userId}`}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Approve
+                          </Button>
+                        )}
+                        {account.approvalStatus !== "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => { setRejectModal({ userId: account.userId, name: "this contractor" }); setRejectReason(""); }}
+                            data-testid={`button-reject-account-${account.userId}`}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Reject
+                          </Button>
+                        )}
+                        {account.approvalStatus === "rejected" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => approveMutation.mutate(account.userId)}
+                            disabled={approveMutation.isPending}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Approve Instead
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* PUBLIC APPLICATION TABS */}
         {["pending", "approved", "waitlisted", "rejected"].map(status => (
           <TabsContent key={status} value={status} className="space-y-3 mt-4">
             {isLoading ? <p className="text-muted-foreground">Loading...</p> : byStatus(status).length === 0 ? (
@@ -162,6 +277,7 @@ export default function Applications() {
         ))}
       </Tabs>
 
+      {/* Application action dialog */}
       <Dialog open={!!actionModal} onOpenChange={() => setActionModal(null)}>
         <DialogContent>
           <DialogHeader>
@@ -195,6 +311,41 @@ export default function Applications() {
               data-testid="button-confirm-action"
             >
               {updateMutation.isPending ? "Processing..." : actionModal?.action === "approved" ? "Approve & Send Email" : actionModal?.action === "rejected" ? "Reject & Send Email" : "Confirm Waitlist"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject portal account dialog */}
+      <Dialog open={!!rejectModal} onOpenChange={() => setRejectModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Contractor Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              A rejection email will be sent to the contractor. You can include a reason below.
+            </p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Reason (included in email)</p>
+              <Textarea
+                placeholder="e.g. We are currently at capacity in your service area..."
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                data-testid="textarea-reject-reason"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectModal(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectModal && rejectMutation.mutate({ userId: rejectModal.userId, reason: rejectReason })}
+              disabled={rejectMutation.isPending}
+              data-testid="button-confirm-reject"
+            >
+              {rejectMutation.isPending ? "Processing..." : "Reject & Send Email"}
             </Button>
           </DialogFooter>
         </DialogContent>

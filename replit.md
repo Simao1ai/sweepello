@@ -101,6 +101,8 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Authenticated users with role="admin" see the Admin Portal (/admin/*)
 - Role is stored in userProfiles table; set on first profile creation via role selection
 - Role escalation is prevented server-side (admin role cannot be self-assigned)
+- New contractors get approvalStatus='pending' on profile creation and see a "Under Review" holding page until an admin approves them
+- Existing contractors with null approvalStatus are treated as approved (legacy accounts)
 - Each portal has distinct sidebar styling (colors, icons, branding)
 
 ## API Routes

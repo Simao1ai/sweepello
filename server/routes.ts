@@ -55,14 +55,15 @@ export async function registerRoutes(
       const userId = getUserId(req);
       const existing = await storage.getUserProfile(userId);
       if (existing) {
-        const { role: _ignoredRole, ...safeBody } = req.body;
+        const { role: _ignoredRole, approvalStatus: _ignored2, ...safeBody } = req.body;
         const updated = await storage.updateUserProfile(userId, safeBody);
         return res.json(updated);
       }
       const allowedRoles = ["client", "contractor"];
       const chosenRole = allowedRoles.includes(req.body.role) ? req.body.role : "client";
       const { role: _ignored, ...rest } = req.body;
-      const validated = insertUserProfileSchema.parse({ ...rest, userId, role: chosenRole });
+      const approvalStatus = chosenRole === "contractor" ? "pending" : "approved";
+      const validated = insertUserProfileSchema.parse({ ...rest, userId, role: chosenRole, approvalStatus });
       const profile = await storage.createUserProfile(validated);
       res.json(profile);
     } catch (err: unknown) {
@@ -1053,6 +1054,57 @@ export async function registerRoutes(
       res.json(application);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === ADMIN: PENDING CONTRACTOR ACCOUNTS ===
+  app.get("/api/admin/pending-contractors", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const profile = await storage.getUserProfile(userId);
+    if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+    const all = await storage.getAllUserProfiles();
+    const pending = all.filter(p => p.role === "contractor" && p.approvalStatus !== "approved");
+    res.json(pending);
+  });
+
+  app.post("/api/admin/pending-contractors/:targetUserId/approve", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const { targetUserId } = req.params;
+      const updated = await storage.updateUserProfile(targetUserId, { approvalStatus: "approved" });
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      try {
+        const onboarding = await storage.getContractorOnboarding(targetUserId);
+        if (onboarding?.email) {
+          await sendApplicationApprovedEmail(onboarding.email, onboarding.fullName);
+        }
+      } catch {}
+      res.json({ success: true, profile: updated });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/admin/pending-contractors/:targetUserId/reject", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const { targetUserId } = req.params;
+      const { reason } = req.body;
+      const updated = await storage.updateUserProfile(targetUserId, { approvalStatus: "rejected" });
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      try {
+        const onboarding = await storage.getContractorOnboarding(targetUserId);
+        if (onboarding?.email) {
+          await sendApplicationRejectedEmail(onboarding.email, onboarding.fullName, reason || "We are unable to approve your application at this time.");
+        }
+      } catch {}
+      res.json({ success: true, profile: updated });
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
     }
   });
 

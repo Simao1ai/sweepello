@@ -32,6 +32,7 @@ import ContractorNotifications from "@/pages/contractor-notifications";
 import ContractorOnboarding from "@/pages/contractor-onboarding";
 import ContractorApply from "@/pages/contractor-apply";
 import ContractorPayouts from "@/pages/contractor-payouts";
+import ContractorPending from "@/pages/contractor-pending";
 import Applications from "@/pages/admin/applications";
 import ReviewModeration from "@/pages/admin/review-moderation";
 import Disputes from "@/pages/admin/disputes";
@@ -62,6 +63,10 @@ function AuthenticatedApp() {
   const role = profile.role === "admin" ? "admin" : profile.role === "contractor" ? "contractor" : "client";
 
   if (role === "contractor") {
+    const status = (profile as any).approvalStatus;
+    if (status === "pending" || status === "rejected") {
+      return <ContractorPending />;
+    }
     return <ContractorApp user={user} />;
   }
 

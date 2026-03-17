@@ -13,6 +13,7 @@ export const userProfiles = pgTable("user_profiles", {
   address: text("address"),
   city: text("city"),
   zipCode: text("zip_code"),
+  approvalStatus: text("approval_status"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
