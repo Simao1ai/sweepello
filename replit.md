@@ -15,11 +15,16 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **Routing**: Wouter
 - **State**: TanStack React Query
 
+## Tech Stack (additional)
+- **Email**: SendGrid (via Replit integration) for transactional emails (application approved/rejected)
+
 ## Project Structure
-- `client/src/pages/` - Landing, RoleSelection, Dashboard (admin), ClientDashboard, ContractorDashboard, ContractorEarnings, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding
+- `client/src/pages/` - Landing, RoleSelection, Dashboard (admin), ClientDashboard, ContractorDashboard, ContractorEarnings, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding, ContractorApply (public)
+- `client/src/pages/admin/` - Applications, ReviewModeration, Disputes, Broadcast
 - `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, UI components
 - `client/src/hooks/` - use-auth.ts (authentication hook)
 - `server/` - Express API routes, Drizzle DB, storage layer, seed data
+- `server/sendgrid.ts` - SendGrid email client (approval/rejection emails)
 - `server/replit_integrations/auth/` - Replit Auth OIDC integration
 - `shared/schema.ts` - All Drizzle schemas and types
 - `shared/models/auth.ts` - Users and sessions schemas for Replit Auth
@@ -38,6 +43,11 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **reviews** - Post-service ratings with user linkage
 - **notifications** - In-app notifications (userId, title, message, type, jobId, serviceRequestId, jobOfferId, isRead)
 - **contractorOnboarding** - Multi-step contractor onboarding (userId, business info, W-9 signature, insurance, Stripe Connect accountId, onboardingStatus)
+- **contractorApplications** - Public contractor applications (pre-account); status: pending/approved/rejected/waitlisted; admin reviews and triggers approval/rejection emails
+- **disputes** - Dispute resolution records (open/investigating/resolved); admin managed with notes and resolution tracking
+- **clients** now has isActive, isVip, adminNote fields for admin management
+- **cleaners** now has statusNote, isFeatured, adminNote fields for admin management
+- **reviews** now has moderationStatus (approved/hidden/pending), adminNote, adminModifiedAt for admin moderation
 
 ## Key Features
 ### Client Portal
