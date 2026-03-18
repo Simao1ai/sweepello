@@ -1,0 +1,624 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A100000001 /* SweepelloApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000001; };
+		A100000002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000002; };
+		A100000003 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000003; };
+		A100000004 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000004; };
+		A100000005 /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000005; };
+		A100000006 /* Cleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000006; };
+		A100000007 /* Job.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000007; };
+		A100000008 /* ServiceRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000008; };
+		A100000009 /* Payment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000009; };
+		A100000010 /* Review.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000010; };
+		A100000011 /* JobOffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000011; };
+		A100000012 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000012; };
+		A100000013 /* ContractorOnboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000013; };
+		A100000014 /* ContractorApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000014; };
+		A100000015 /* Dispute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000015; };
+		A100000016 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000016; };
+		A100000017 /* DashboardStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000017; };
+		A100000018 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000018; };
+		A100000019 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000019; };
+		A100000020 /* WebSocketManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000020; };
+		A100000021 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000021; };
+		A100000022 /* LandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000022; };
+		A100000023 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000023; };
+		A100000024 /* RoleSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000024; };
+		A100000025 /* ClientTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000025; };
+		A100000026 /* ClientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000026; };
+		A100000027 /* RequestServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000027; };
+		A100000028 /* MyBookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000028; };
+		A100000029 /* RateServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000029; };
+		A100000030 /* ClientProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000030; };
+		A100000031 /* ContractorTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000031; };
+		A100000032 /* ContractorDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000032; };
+		A100000033 /* ContractorJobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000033; };
+		A100000034 /* ContractorAvailabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000034; };
+		A100000035 /* ContractorNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000035; };
+		A100000036 /* ContractorOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000036; };
+		A100000037 /* ContractorPendingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000037; };
+		A100000038 /* ContractorProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000038; };
+		A100000039 /* ContractorApplyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000039; };
+		A100000040 /* AdminTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000040; };
+		A100000041 /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000041; };
+		A100000042 /* AdminJobsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000042; };
+		A100000043 /* AdminCleanersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000043; };
+		A100000044 /* AdminClientsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000044; };
+		A100000045 /* AdminMoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000045; };
+		A100000046 /* AdminServiceRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000046; };
+		A100000047 /* AdminApplicationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000047; };
+		A100000048 /* AdminScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000048; };
+		A100000049 /* AdminPaymentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000049; };
+		A100000050 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000050; };
+		A100000051 /* JobChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000051; };
+		A100000052 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B100000052; };
+		A100000053 /* WebAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000054; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C100000001 /* Sweepello.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sweepello.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B100000001 /* SweepelloApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SweepelloApp.swift; sourceTree = "<group>"; };
+		B100000002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		B100000003 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		B100000004 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		B100000005 /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
+		B100000006 /* Cleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cleaner.swift; sourceTree = "<group>"; };
+		B100000007 /* Job.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Job.swift; sourceTree = "<group>"; };
+		B100000008 /* ServiceRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRequest.swift; sourceTree = "<group>"; };
+		B100000009 /* Payment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payment.swift; sourceTree = "<group>"; };
+		B100000010 /* Review.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Review.swift; sourceTree = "<group>"; };
+		B100000011 /* JobOffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobOffer.swift; sourceTree = "<group>"; };
+		B100000012 /* Notification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
+		B100000013 /* ContractorOnboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorOnboarding.swift; sourceTree = "<group>"; };
+		B100000014 /* ContractorApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorApplication.swift; sourceTree = "<group>"; };
+		B100000015 /* Dispute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dispute.swift; sourceTree = "<group>"; };
+		B100000016 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
+		B100000017 /* DashboardStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardStats.swift; sourceTree = "<group>"; };
+		B100000018 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		B100000019 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		B100000020 /* WebSocketManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketManager.swift; sourceTree = "<group>"; };
+		B100000021 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		B100000022 /* LandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingView.swift; sourceTree = "<group>"; };
+		B100000023 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		B100000024 /* RoleSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoleSelectionView.swift; sourceTree = "<group>"; };
+		B100000025 /* ClientTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientTabView.swift; sourceTree = "<group>"; };
+		B100000026 /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
+		B100000027 /* RequestServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestServiceView.swift; sourceTree = "<group>"; };
+		B100000028 /* MyBookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyBookingsView.swift; sourceTree = "<group>"; };
+		B100000029 /* RateServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RateServiceView.swift; sourceTree = "<group>"; };
+		B100000030 /* ClientProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientProfileView.swift; sourceTree = "<group>"; };
+		B100000031 /* ContractorTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorTabView.swift; sourceTree = "<group>"; };
+		B100000032 /* ContractorDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorDashboardView.swift; sourceTree = "<group>"; };
+		B100000033 /* ContractorJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorJobsView.swift; sourceTree = "<group>"; };
+		B100000034 /* ContractorAvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorAvailabilityView.swift; sourceTree = "<group>"; };
+		B100000035 /* ContractorNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorNotificationsView.swift; sourceTree = "<group>"; };
+		B100000036 /* ContractorOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorOnboardingView.swift; sourceTree = "<group>"; };
+		B100000037 /* ContractorPendingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorPendingView.swift; sourceTree = "<group>"; };
+		B100000038 /* ContractorProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorProfileView.swift; sourceTree = "<group>"; };
+		B100000039 /* ContractorApplyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractorApplyView.swift; sourceTree = "<group>"; };
+		B100000040 /* AdminTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTabView.swift; sourceTree = "<group>"; };
+		B100000041 /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
+		B100000042 /* AdminJobsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminJobsView.swift; sourceTree = "<group>"; };
+		B100000043 /* AdminCleanersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCleanersView.swift; sourceTree = "<group>"; };
+		B100000044 /* AdminClientsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminClientsView.swift; sourceTree = "<group>"; };
+		B100000045 /* AdminMoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminMoreView.swift; sourceTree = "<group>"; };
+		B100000046 /* AdminServiceRequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminServiceRequestsView.swift; sourceTree = "<group>"; };
+		B100000047 /* AdminApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminApplicationsView.swift; sourceTree = "<group>"; };
+		B100000048 /* AdminScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduleView.swift; sourceTree = "<group>"; };
+		B100000049 /* AdminPaymentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPaymentsView.swift; sourceTree = "<group>"; };
+		B100000050 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
+		B100000051 /* JobChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobChatView.swift; sourceTree = "<group>"; };
+		B100000052 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B100000053 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B100000054 /* WebAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E100000001 /* root */ = {
+			isa = PBXGroup;
+			children = (
+				E100000002 /* Sweepello */,
+				E100000020 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E100000020 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C100000001 /* Sweepello.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E100000002 /* Sweepello */ = {
+			isa = PBXGroup;
+			children = (
+				E100000003 /* App */,
+				E100000004 /* Models */,
+				E100000005 /* Services */,
+				E100000006 /* Views */,
+				E100000011 /* Components */,
+				E100000012 /* Resources */,
+			);
+			path = Sweepello;
+			sourceTree = "<group>";
+		};
+		E100000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B100000001 /* SweepelloApp.swift */,
+				B100000002 /* RootView.swift */,
+				B100000003 /* Configuration.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		E100000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B100000004 /* User.swift */,
+				B100000005 /* Client.swift */,
+				B100000006 /* Cleaner.swift */,
+				B100000007 /* Job.swift */,
+				B100000008 /* ServiceRequest.swift */,
+				B100000009 /* Payment.swift */,
+				B100000010 /* Review.swift */,
+				B100000011 /* JobOffer.swift */,
+				B100000012 /* Notification.swift */,
+				B100000013 /* ContractorOnboarding.swift */,
+				B100000014 /* ContractorApplication.swift */,
+				B100000015 /* Dispute.swift */,
+				B100000016 /* Message.swift */,
+				B100000017 /* DashboardStats.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		E100000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B100000018 /* APIClient.swift */,
+				B100000019 /* AuthManager.swift */,
+				B100000020 /* WebSocketManager.swift */,
+				B100000021 /* ThemeManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E100000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E100000007 /* Auth */,
+				E100000008 /* Client */,
+				E100000009 /* Contractor */,
+				E100000010 /* Admin */,
+				E100000013 /* Shared */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E100000007 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				B100000022 /* LandingView.swift */,
+				B100000023 /* LoginView.swift */,
+				B100000024 /* RoleSelectionView.swift */,
+				B100000054 /* WebAuthView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		E100000008 /* Client */ = {
+			isa = PBXGroup;
+			children = (
+				B100000025 /* ClientTabView.swift */,
+				B100000026 /* ClientDashboardView.swift */,
+				B100000027 /* RequestServiceView.swift */,
+				B100000028 /* MyBookingsView.swift */,
+				B100000029 /* RateServiceView.swift */,
+				B100000030 /* ClientProfileView.swift */,
+			);
+			path = Client;
+			sourceTree = "<group>";
+		};
+		E100000009 /* Contractor */ = {
+			isa = PBXGroup;
+			children = (
+				B100000031 /* ContractorTabView.swift */,
+				B100000032 /* ContractorDashboardView.swift */,
+				B100000033 /* ContractorJobsView.swift */,
+				B100000034 /* ContractorAvailabilityView.swift */,
+				B100000035 /* ContractorNotificationsView.swift */,
+				B100000036 /* ContractorOnboardingView.swift */,
+				B100000037 /* ContractorPendingView.swift */,
+				B100000038 /* ContractorProfileView.swift */,
+				B100000039 /* ContractorApplyView.swift */,
+			);
+			path = Contractor;
+			sourceTree = "<group>";
+		};
+		E100000010 /* Admin */ = {
+			isa = PBXGroup;
+			children = (
+				B100000040 /* AdminTabView.swift */,
+				B100000041 /* AdminDashboardView.swift */,
+				B100000042 /* AdminJobsView.swift */,
+				B100000043 /* AdminCleanersView.swift */,
+				B100000044 /* AdminClientsView.swift */,
+				B100000045 /* AdminMoreView.swift */,
+				B100000046 /* AdminServiceRequestsView.swift */,
+				B100000047 /* AdminApplicationsView.swift */,
+				B100000048 /* AdminScheduleView.swift */,
+				B100000049 /* AdminPaymentsView.swift */,
+			);
+			path = Admin;
+			sourceTree = "<group>";
+		};
+		E100000011 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				B100000050 /* SharedComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		E100000012 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B100000052 /* Assets.xcassets */,
+				B100000053 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		E100000013 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B100000051 /* JobChatView.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F100000001 /* Sweepello */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F100000004 /* Build configuration list for PBXNativeTarget "Sweepello" */;
+			buildPhases = (
+				F100000002 /* Sources */,
+				D100000001 /* Frameworks */,
+				F100000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Sweepello;
+			productName = Sweepello;
+			productReference = C100000001 /* Sweepello.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F100000005 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					F100000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = F100000006 /* Build configuration list for PBXProject "Sweepello" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E100000001 /* root */;
+			productRefGroup = E100000020 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F100000001 /* Sweepello */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F100000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A100000052 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F100000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A100000001 /* SweepelloApp.swift in Sources */,
+				A100000002 /* RootView.swift in Sources */,
+				A100000003 /* Configuration.swift in Sources */,
+				A100000004 /* User.swift in Sources */,
+				A100000005 /* Client.swift in Sources */,
+				A100000006 /* Cleaner.swift in Sources */,
+				A100000007 /* Job.swift in Sources */,
+				A100000008 /* ServiceRequest.swift in Sources */,
+				A100000009 /* Payment.swift in Sources */,
+				A100000010 /* Review.swift in Sources */,
+				A100000011 /* JobOffer.swift in Sources */,
+				A100000012 /* Notification.swift in Sources */,
+				A100000013 /* ContractorOnboarding.swift in Sources */,
+				A100000014 /* ContractorApplication.swift in Sources */,
+				A100000015 /* Dispute.swift in Sources */,
+				A100000016 /* Message.swift in Sources */,
+				A100000017 /* DashboardStats.swift in Sources */,
+				A100000018 /* APIClient.swift in Sources */,
+				A100000019 /* AuthManager.swift in Sources */,
+				A100000020 /* WebSocketManager.swift in Sources */,
+				A100000021 /* ThemeManager.swift in Sources */,
+				A100000022 /* LandingView.swift in Sources */,
+				A100000023 /* LoginView.swift in Sources */,
+				A100000024 /* RoleSelectionView.swift in Sources */,
+				A100000025 /* ClientTabView.swift in Sources */,
+				A100000026 /* ClientDashboardView.swift in Sources */,
+				A100000027 /* RequestServiceView.swift in Sources */,
+				A100000028 /* MyBookingsView.swift in Sources */,
+				A100000029 /* RateServiceView.swift in Sources */,
+				A100000030 /* ClientProfileView.swift in Sources */,
+				A100000031 /* ContractorTabView.swift in Sources */,
+				A100000032 /* ContractorDashboardView.swift in Sources */,
+				A100000033 /* ContractorJobsView.swift in Sources */,
+				A100000034 /* ContractorAvailabilityView.swift in Sources */,
+				A100000035 /* ContractorNotificationsView.swift in Sources */,
+				A100000036 /* ContractorOnboardingView.swift in Sources */,
+				A100000037 /* ContractorPendingView.swift in Sources */,
+				A100000038 /* ContractorProfileView.swift in Sources */,
+				A100000039 /* ContractorApplyView.swift in Sources */,
+				A100000040 /* AdminTabView.swift in Sources */,
+				A100000041 /* AdminDashboardView.swift in Sources */,
+				A100000042 /* AdminJobsView.swift in Sources */,
+				A100000043 /* AdminCleanersView.swift in Sources */,
+				A100000044 /* AdminClientsView.swift in Sources */,
+				A100000045 /* AdminMoreView.swift in Sources */,
+				A100000046 /* AdminServiceRequestsView.swift in Sources */,
+				A100000047 /* AdminApplicationsView.swift in Sources */,
+				A100000048 /* AdminScheduleView.swift in Sources */,
+				A100000049 /* AdminPaymentsView.swift in Sources */,
+				A100000050 /* SharedComponents.swift in Sources */,
+				A100000051 /* JobChatView.swift in Sources */,
+				A100000053 /* WebAuthView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F100000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F100000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F100000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sweepello/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sweepello.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F100000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Sweepello/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sweepello.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F100000006 /* Build configuration list for PBXProject "Sweepello" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F100000007 /* Debug */,
+				F100000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F100000004 /* Build configuration list for PBXNativeTarget "Sweepello" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F100000009 /* Debug */,
+				F100000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = F100000005 /* Project object */;
+}
