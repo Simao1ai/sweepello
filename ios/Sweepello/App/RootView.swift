@@ -34,7 +34,7 @@ struct SplashScreen: View {
         VStack(spacing: 16) {
             Image(systemName: "sparkles")
                 .font(.system(size: 64))
-                .foregroundStyle(.indigo)
+                .foregroundStyle(Color.sweepelloPrimary)
             Text("Sweepello")
                 .font(.largeTitle.bold())
             ProgressView()
