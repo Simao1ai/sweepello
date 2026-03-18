@@ -319,7 +319,7 @@ struct ContractorOnboardingView: View {
             struct StripeResponse: Codable { let url: String }
             if let response: StripeResponse = try? await APIClient.shared.post("/api/contractor/onboarding/stripe-connect") {
                 if let url = URL(string: response.url) {
-                    UIApplication.shared.open(url)
+                    await UIApplication.shared.open(url)
                 }
             }
         }
