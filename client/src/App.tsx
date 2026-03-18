@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AdminAiAgent } from "@/components/admin-ai-agent";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotFound from "@/pages/not-found";
@@ -108,6 +109,7 @@ function AdminApp({ user }: { user: any }) {
               <Route component={NotFound} />
             </Switch>
           </main>
+          <AdminAiAgent />
         </div>
       </div>
     </SidebarProvider>

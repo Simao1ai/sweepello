@@ -60,6 +60,7 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Location-based cleaner matching by zip code
 
 ### Admin Portal
+- **Sweepo AI Agent**: floating chat assistant (bottom-right) powered by Replit AI (gpt-4o); fetches live business data on every request; quick-prompt chips; streaming responses; reset/close controls
 - Dashboard with KPI stats (revenue, margin, jobs, ratings)
 - Scheduling calendar with job events, pending requests, and broadcasting status
 - Uber-style job broadcast: auto-notify available cleaners sorted by rating, or manual assignment

@@ -7,6 +7,7 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { setupWebSocket } from "./ws";
+import { registerAiAgentRoutes } from "./ai-agent";
 
 const app = express();
 const httpServer = createServer(app);
@@ -143,6 +144,7 @@ export function log(message: string, source = "express") {
 
   await setupAuth(app);
   registerAuthRoutes(app);
+  registerAiAgentRoutes(app);
   setupWebSocket(httpServer);
 
   const { seedDatabase } = await import("./seed");
