@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MyBookingsView: View {
     @State private var bookings: [ServiceRequest] = []
+    @State private var reviews: [Review] = []
     @State private var isLoading = true
     @State private var selectedFilter: BookingFilter = .all
 
@@ -9,6 +10,12 @@ struct MyBookingsView: View {
         case all = "All"
         case active = "Active"
         case completed = "Completed"
+    }
+
+    var reviewsByJobId: [String: Review] {
+        Dictionary(uniqueKeysWithValues: reviews.compactMap { r in
+            (r.jobId, r)
+        })
     }
 
     var filteredBookings: [ServiceRequest] {
@@ -19,10 +26,15 @@ struct MyBookingsView: View {
         }
     }
 
+    var unratedCompleted: [ServiceRequest] {
+        bookings.filter { b in
+            b.status == "completed" && b.jobId != nil && reviewsByJobId[b.jobId!] == nil
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Filter Picker
                 Picker("Filter", selection: $selectedFilter) {
                     ForEach(BookingFilter.allCases, id: \.self) { filter in
                         Text(filter.rawValue).tag(filter)
@@ -44,11 +56,31 @@ struct MyBookingsView: View {
                     )
                     Spacer()
                 } else {
-                    List(filteredBookings) { booking in
-                        NavigationLink {
-                            BookingDetailView(request: booking)
-                        } label: {
-                            BookingRow(request: booking)
+                    List {
+                        // Rate prompts for unrated completed bookings
+                        if !unratedCompleted.isEmpty && selectedFilter != .active {
+                            Section {
+                                ForEach(unratedCompleted) { booking in
+                                    NavigationLink {
+                                        RateServiceView(serviceRequestId: booking.id)
+                                    } label: {
+                                        RatePromptRow(address: booking.propertyAddress)
+                                    }
+                                }
+                            } header: {
+                                Text("Rate Your Experience")
+                            }
+                        }
+
+                        // Bookings list
+                        Section {
+                            ForEach(filteredBookings) { booking in
+                                NavigationLink {
+                                    BookingDetailView(request: booking, review: booking.jobId.flatMap { reviewsByJobId[$0] })
+                                } label: {
+                                    BookingRow(request: booking, review: booking.jobId.flatMap { reviewsByJobId[$0] })
+                                }
+                            }
                         }
                     }
                     .listStyle(.plain)
@@ -56,23 +88,60 @@ struct MyBookingsView: View {
             }
             .navigationTitle("My Bookings")
             .refreshable {
-                await loadBookings()
+                await loadData()
             }
             .task {
-                await loadBookings()
+                await loadData()
             }
         }
     }
 
-    private func loadBookings() async {
+    private func loadData() async {
         isLoading = true
-        bookings = (try? await APIClient.shared.get("/api/service-requests/mine")) ?? []
+        async let bookingsResult: [ServiceRequest] = APIClient.shared.get("/api/service-requests/mine")
+        async let reviewsResult: [Review] = APIClient.shared.get("/api/reviews/mine")
+        bookings = (try? await bookingsResult) ?? []
+        reviews = (try? await reviewsResult) ?? []
         isLoading = false
+    }
+}
+
+struct RatePromptRow: View {
+    let address: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 2) {
+                ForEach(1...5, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("How was your cleaning?")
+                    .font(.subheadline.bold())
+                Text(address)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("Rate Now")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.yellow.opacity(0.85))
+                .clipShape(Capsule())
+        }
+        .padding(.vertical, 4)
     }
 }
 
 struct BookingRow: View {
     let request: ServiceRequest
+    var review: Review? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -87,6 +156,17 @@ struct BookingRow: View {
                 Label(request.serviceType.capitalized, systemImage: "sparkles")
                 if let price = request.priceValue {
                     Label("$\(String(format: "%.0f", price))", systemImage: "dollarsign.circle")
+                }
+                if let review {
+                    HStack(spacing: 2) {
+                        ForEach(1...5, id: \.self) { i in
+                            Image(systemName: i <= review.rating ? "star.fill" : "star")
+                                .font(.system(size: 8))
+                                .foregroundStyle(i <= review.rating ? .yellow : .gray.opacity(0.3))
+                        }
+                        Text("Rated")
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .font(.caption)
@@ -109,17 +189,15 @@ struct BookingRow: View {
 
 struct BookingDetailView: View {
     let request: ServiceRequest
+    var review: Review? = nil
     @State private var showRating = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Status Card
                 VStack(spacing: 12) {
                     StatusBadge(status: request.requestStatus.displayName, color: .blue)
                         .scaleEffect(1.2)
-
-                    // Status Timeline
                     StatusTimeline(currentStatus: request.status)
                 }
                 .padding()
@@ -127,7 +205,6 @@ struct BookingDetailView: View {
                 .background(Color(.systemGroupedBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
-                // Property Details
                 DetailSection(title: "Property") {
                     DetailRow(icon: "mappin.circle", label: "Address", value: request.propertyAddress)
                     if let city = request.city {
@@ -145,7 +222,6 @@ struct BookingDetailView: View {
                     }
                 }
 
-                // Service Details
                 DetailSection(title: "Service") {
                     DetailRow(icon: "sparkles", label: "Type", value: request.serviceType.capitalized)
                     if let price = request.priceValue {
@@ -153,8 +229,25 @@ struct BookingDetailView: View {
                     }
                 }
 
-                // Rate button for completed jobs
-                if request.status == "completed" {
+                // Show existing review or rate button
+                if let review {
+                    DetailSection(title: "Your Rating") {
+                        HStack(spacing: 4) {
+                            ForEach(1...5, id: \.self) { i in
+                                Image(systemName: i <= review.rating ? "star.fill" : "star")
+                                    .foregroundStyle(i <= review.rating ? .yellow : .gray.opacity(0.3))
+                            }
+                            Spacer()
+                            Text("\(review.rating)/5")
+                                .font(.subheadline.bold())
+                        }
+                        if let comment = review.comment, !comment.isEmpty {
+                            Text(comment)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else if request.status == "completed" {
                     Button {
                         showRating = true
                     } label: {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContractorJobsView: View {
     @State private var jobs: [Job] = []
+    @State private var reviews: [Review] = []
     @State private var isLoading = true
     @State private var selectedFilter: JobFilter = .active
 
@@ -9,6 +10,12 @@ struct ContractorJobsView: View {
         case active = "Active"
         case completed = "Completed"
         case all = "All"
+    }
+
+    var reviewsByJobId: [String: Review] {
+        Dictionary(uniqueKeysWithValues: reviews.compactMap { r in
+            (r.jobId, r)
+        })
     }
 
     var filteredJobs: [Job] {
@@ -41,29 +48,33 @@ struct ContractorJobsView: View {
                 } else {
                     List(filteredJobs) { job in
                         NavigationLink {
-                            ContractorJobDetailView(job: job, onStatusChange: { await loadJobs() })
+                            ContractorJobDetailView(job: job, onStatusChange: { await loadData() })
                         } label: {
-                            ContractorJobRow(job: job)
+                            ContractorJobRow(job: job, clientReview: reviewsByJobId[job.id])
                         }
                     }
                     .listStyle(.plain)
                 }
             }
             .navigationTitle("My Jobs")
-            .refreshable { await loadJobs() }
-            .task { await loadJobs() }
+            .refreshable { await loadData() }
+            .task { await loadData() }
         }
     }
 
-    private func loadJobs() async {
+    private func loadData() async {
         isLoading = true
-        jobs = (try? await APIClient.shared.get("/api/contractor/jobs")) ?? []
+        async let jobsResult: [Job] = APIClient.shared.get("/api/contractor/jobs")
+        async let reviewsResult: [Review] = APIClient.shared.get("/api/contractor/reviews")
+        jobs = (try? await jobsResult) ?? []
+        reviews = (try? await reviewsResult) ?? []
         isLoading = false
     }
 }
 
 struct ContractorJobRow: View {
     let job: Job
+    var clientReview: Review? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -80,6 +91,23 @@ struct ContractorJobRow: View {
             }
             HStack {
                 StatusBadge(status: job.jobStatus.displayName, color: statusColor)
+                if job.status == "completed" {
+                    if let review = clientReview {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.yellow)
+                            Text("\(review.rating)/5 client review")
+                                .foregroundStyle(.green)
+                        }
+                        .font(.caption)
+                    } else {
+                        Text("No client review yet")
+                            .font(.caption)
+                            .foregroundStyle(.secondary.opacity(0.6))
+                            .italic()
+                    }
+                }
                 Spacer()
                 Text(job.scheduledDate)
                     .font(.caption)
@@ -107,12 +135,10 @@ struct ContractorJobDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Status
                 StatusBadge(status: job.jobStatus.displayName, color: .blue)
                     .scaleEffect(1.3)
                     .padding()
 
-                // Details
                 DetailSection(title: "Job Details") {
                     DetailRow(icon: "mappin.circle", label: "Address", value: job.propertyAddress)
                     DetailRow(icon: "calendar", label: "Date", value: job.scheduledDate)
@@ -124,7 +150,6 @@ struct ContractorJobDetailView: View {
                     }
                 }
 
-                // Action Buttons
                 if job.status == "assigned" {
                     Button {
                         updateStatus("in_progress")

@@ -5,6 +5,9 @@ enum NotificationType: String, Codable {
     case jobOffer = "job_offer"
     case jobUpdate = "job_update"
     case jobCompleted = "job_completed"
+    case reviewReceived = "review_received"
+    case ratePrompt = "rate_prompt"
+    case lowRatingAlert = "low_rating_alert"
     case general
     case broadcast
 
@@ -14,6 +17,9 @@ enum NotificationType: String, Codable {
         case .jobOffer: return "bell.badge"
         case .jobUpdate: return "arrow.triangle.2.circlepath"
         case .jobCompleted: return "checkmark.circle"
+        case .reviewReceived: return "star.circle.fill"
+        case .ratePrompt: return "star.bubble"
+        case .lowRatingAlert: return "exclamationmark.triangle"
         case .general: return "info.circle"
         case .broadcast: return "megaphone"
         }
