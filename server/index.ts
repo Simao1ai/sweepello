@@ -54,6 +54,25 @@ async function initStripe() {
   }
 }
 
+const OWNER_USER_ID = "52853713";
+
+async function ensureAdminUser() {
+  const { db } = await import("./db");
+  const { userProfiles } = await import("@shared/schema");
+  const { eq } = await import("drizzle-orm");
+
+  const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, OWNER_USER_ID));
+  if (!existing) {
+    await db.insert(userProfiles).values({ userId: OWNER_USER_ID, role: "admin" });
+    console.log(`[startup] Created admin profile for owner (${OWNER_USER_ID})`);
+  } else if (existing.role !== "admin") {
+    await db.update(userProfiles).set({ role: "admin" }).where(eq(userProfiles.userId, OWNER_USER_ID));
+    console.log(`[startup] Fixed admin role for owner (${OWNER_USER_ID}), was: ${existing.role}`);
+  } else {
+    console.log(`[startup] Owner admin role verified (${OWNER_USER_ID})`);
+  }
+}
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -126,6 +145,7 @@ export function log(message: string, source = "express") {
 
   const { seedDatabase } = await import("./seed");
   await seedDatabase().catch((err) => console.error("Seed error:", err));
+  await ensureAdminUser().catch((err) => console.error("Admin seed error:", err));
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
