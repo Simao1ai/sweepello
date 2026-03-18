@@ -77,7 +77,15 @@ export default function ContractorApply() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: any) => apiRequest("POST", "/api/contractor-applications", data),
+    mutationFn: async (data: any) => {
+      const payload = {
+        ...data,
+        cleaningTypes: Array.isArray(data.cleaningTypes) ? data.cleaningTypes.join(", ") : (data.cleaningTypes || ""),
+        availableDays: Array.isArray(data.availableDays) ? data.availableDays.join(", ") : (data.availableDays || ""),
+        yearsExperience: parseInt(data.yearsExperience, 10) || 0,
+      };
+      return apiRequest("POST", "/api/contractor-applications", payload);
+    },
     onSuccess: () => setSubmitted(true),
     onError: (err: any) => toast({ title: "Submission failed", description: err.message, variant: "destructive" }),
   });
