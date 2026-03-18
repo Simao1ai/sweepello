@@ -13,11 +13,10 @@ struct LoginView: View {
 
                 // Logo
                 VStack(spacing: 12) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 56))
-                        .foregroundStyle(Color.sweepelloPrimary)
-                    Text("Sweepello")
-                        .font(.largeTitle.bold())
+                    Image("SweepelloLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 180)
                     Text("Sign in to continue")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

@@ -6,7 +6,7 @@ struct ClientTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ClientDashboardView()
+            ClientDashboardView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("Home", systemImage: "house.fill")
                 }

@@ -32,11 +32,10 @@ struct RootView: View {
 struct SplashScreen: View {
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 64))
-                .foregroundStyle(Color.sweepelloPrimary)
-            Text("Sweepello")
-                .font(.largeTitle.bold())
+            Image("SweepelloLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200)
             ProgressView()
         }
     }

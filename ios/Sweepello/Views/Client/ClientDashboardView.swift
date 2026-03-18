@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ClientDashboardView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Binding var selectedTab: Int
     @State private var recentBookings: [ServiceRequest] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var showRateSheet = false
 
     var body: some View {
         NavigationStack {
@@ -28,6 +30,11 @@ struct ClientDashboardView: View {
             .task {
                 await loadData()
             }
+            .sheet(isPresented: $showRateSheet) {
+                if let lastCompleted = recentBookings.first(where: { $0.status == "completed" }) {
+                    RateServiceView(serviceRequestId: lastCompleted.id)
+                }
+            }
         }
     }
 
@@ -50,10 +57,23 @@ struct ClientDashboardView: View {
 
     private var quickActions: some View {
         HStack(spacing: 12) {
-            QuickActionButton(icon: "plus.circle.fill", title: "New Booking", color: .clientPrimary)
-            QuickActionButton(icon: "calendar", title: "My Bookings", color: .orange)
-            QuickActionButton(icon: "star.fill", title: "Rate Service", color: .yellow)
+            Button { selectedTab = 1 } label: {
+                QuickActionButton(icon: "plus.circle.fill", title: "New Booking", color: .clientPrimary)
+            }
+            Button { selectedTab = 2 } label: {
+                QuickActionButton(icon: "calendar", title: "My Bookings", color: .orange)
+            }
+            Button {
+                if recentBookings.contains(where: { $0.status == "completed" }) {
+                    showRateSheet = true
+                } else {
+                    selectedTab = 2
+                }
+            } label: {
+                QuickActionButton(icon: "star.fill", title: "Rate Service", color: .yellow)
+            }
         }
+        .buttonStyle(.plain)
     }
 
     private var recentBookingsSection: some View {

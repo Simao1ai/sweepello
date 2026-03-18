@@ -53,13 +53,10 @@ struct LandingView: View {
             VStack(spacing: 20) {
                 Spacer()
 
-                Image(systemName: "sparkles")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.white)
-
-                Text("Sweepello")
-                    .font(.system(size: 42, weight: .bold))
-                    .foregroundStyle(.white)
+                Image("SweepelloLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 220)
 
                 Text("Professional Airbnb turnover\ncleaning, nationwide")
                     .font(.title3)
