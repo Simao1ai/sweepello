@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import RoleSelection from "@/pages/role-selection";
 import Dashboard from "@/pages/dashboard";
 import ClientDashboard from "@/pages/client-dashboard";
@@ -242,6 +243,7 @@ function AppContent() {
     return (
       <Switch>
         <Route path="/apply" component={ContractorApply} />
+        <Route path="/login" component={Login} />
         <Route component={Landing} />
       </Switch>
     );

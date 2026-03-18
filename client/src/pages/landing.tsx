@@ -29,7 +29,7 @@ export default function Landing() {
             <a href="#for-cleaners" className="hover:text-white transition-colors">For cleaners</a>
             <a href="#safety" className="hover:text-white transition-colors">Safety</a>
           </div>
-          <a href="/api/login" data-testid="button-login-nav">
+          <a href="/login" data-testid="button-login-nav">
             <Button variant="outline" className="gap-2 border-white/20 text-white bg-white/5 hover:bg-white/10 hover:text-white">
               <LogIn className="h-4 w-4" /> Sign in
             </Button>
@@ -58,7 +58,7 @@ export default function Landing() {
               Book a vetted professional cleaner in minutes. Residential, commercial, and Airbnb turnovers — wherever you are.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-2">
-              <a href="/api/login" data-testid="button-get-started">
+              <a href="/login" data-testid="button-get-started">
                 <Button size="lg" className="gap-2 text-base px-8 py-6 rounded-xl font-semibold bg-white text-black hover:bg-white/90">
                   Book a cleaning <ArrowRight className="h-5 w-5" />
                 </Button>
@@ -138,7 +138,7 @@ export default function Landing() {
             ))}
           </div>
           <div className="mt-12">
-            <a href="/api/login" data-testid="button-book-now">
+            <a href="/login" data-testid="button-book-now">
               <Button size="lg" className="gap-2 px-8 py-6 rounded-xl text-base font-semibold">
                 Book now <ArrowRight className="h-5 w-5" />
               </Button>
@@ -271,7 +271,7 @@ export default function Landing() {
                     Apply to clean <ArrowRight className="h-5 w-5" />
                   </Button>
                 </a>
-                <a href="/api/login" data-testid="button-login-contractor">
+                <a href="/login" data-testid="button-login-contractor">
                   <Button size="lg" variant="outline" className="gap-2 px-8 py-6 rounded-xl text-base font-semibold border-white/20 text-white bg-white/5 hover:bg-white/10 hover:text-white">
                     Sign in
                   </Button>
@@ -306,7 +306,7 @@ export default function Landing() {
             Join thousands of homeowners and property managers who trust Sweepello nationwide.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/api/login" data-testid="button-get-started-bottom">
+            <a href="/login" data-testid="button-get-started-bottom">
               <Button size="lg" className="gap-2 text-base px-10 py-6 rounded-xl font-semibold">
                 Get started free <ArrowRight className="h-5 w-5" />
               </Button>

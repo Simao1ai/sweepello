@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp } from "lucide-react";
+import { AddressSearch } from "@/components/address-search";
 
 interface SurgeData {
   multiplier: number;
@@ -171,14 +172,19 @@ export default function RequestService() {
               </h3>
               <div className="space-y-2">
                 <Label htmlFor="address">Property Address</Label>
-                <Input
+                <AddressSearch
                   id="address"
                   data-testid="input-address"
-                  placeholder="123 Ocean Ave"
-                  required
+                  placeholder="Search your property address..."
                   value={formData.propertyAddress}
-                  onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })}
+                  onChange={(full, parts) => setFormData({
+                    ...formData,
+                    propertyAddress: full,
+                    city: parts.city || formData.city,
+                    zipCode: parts.zip || formData.zipCode,
+                  })}
                 />
+                <p className="text-xs text-muted-foreground">City and ZIP will auto-fill when you select an address</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -186,7 +192,7 @@ export default function RequestService() {
                   <Input
                     id="city"
                     data-testid="input-city"
-                    placeholder="Point Pleasant"
+                    placeholder="Auto-filled"
                     value={formData.city}
                     onChange={e => setFormData({ ...formData, city: e.target.value })}
                   />
@@ -196,7 +202,7 @@ export default function RequestService() {
                   <Input
                     id="zip"
                     data-testid="input-zip"
-                    placeholder="08742"
+                    placeholder="Auto-filled"
                     value={formData.zipCode}
                     onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
                   />

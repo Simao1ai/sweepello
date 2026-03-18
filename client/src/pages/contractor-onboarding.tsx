@@ -15,6 +15,7 @@ import type { ContractorOnboarding } from "@shared/schema";
 import {
   User, FileText, Shield, CreditCard, CheckCircle2, ChevronRight, ChevronLeft, Loader2, ExternalLink, Scale, XCircle,
 } from "lucide-react";
+import { AddressSearch } from "@/components/address-search";
 
 const steps = [
   { id: 1, title: "Business Info", icon: User, description: "Your contact and business details" },
@@ -527,13 +528,20 @@ export default function ContractorOnboardingPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="address">Street Address *</Label>
-              <Input
+              <AddressSearch
                 id="address"
                 data-testid="input-address"
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="123 Main St"
+                placeholder="Start typing your address..."
+                onChange={(full, parts) => setFormData({
+                  ...formData,
+                  address: parts.street || full,
+                  city: parts.city || formData.city,
+                  state: parts.state || formData.state,
+                  zipCode: parts.zip || formData.zipCode,
+                })}
               />
+              <p className="text-xs text-muted-foreground">Type to search — city, state, and ZIP will auto-fill</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -543,7 +551,7 @@ export default function ContractorOnboardingPage() {
                   data-testid="input-city"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="Toms River"
+                  placeholder="Auto-filled from address"
                 />
               </div>
               <div className="space-y-2">
@@ -553,7 +561,7 @@ export default function ContractorOnboardingPage() {
                   data-testid="input-state"
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  placeholder="NJ"
+                  placeholder="Auto-filled"
                 />
               </div>
               <div className="space-y-2">
@@ -563,7 +571,7 @@ export default function ContractorOnboardingPage() {
                   data-testid="input-zipCode"
                   value={formData.zipCode}
                   onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                  placeholder="08753"
+                  placeholder="Auto-filled"
                 />
               </div>
             </div>
