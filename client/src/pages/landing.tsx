@@ -1,319 +1,340 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Sparkles,
-  MapPin,
-  Calendar,
+  ArrowRight,
   Star,
   Shield,
-  ArrowRight,
-  Home,
-  Building2,
-  Hotel,
+  Clock,
   CheckCircle,
-  Users,
-  HardHat,
-  LayoutDashboard,
+  Sparkles,
+  MapPin,
   LogIn,
+  ChevronRight,
 } from "lucide-react";
 import heroImage from "../assets/images/hero-clean.png";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span
-              className="text-2xl font-bold sweepello-gradient"
-              style={{ fontFamily: "'Pacifico', cursive" }}
-            >
-              Sweepello
-            </span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#services" className="hover:text-foreground transition-colors">Services</a>
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
-            <a href="#portals" className="hover:text-foreground transition-colors">Login</a>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          <span
+            className="text-2xl font-bold sweepello-gradient"
+            style={{ fontFamily: "'Pacifico', cursive" }}
+          >
+            Sweepello
+          </span>
+          <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
+            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
+            <a href="#for-cleaners" className="hover:text-white transition-colors">For cleaners</a>
+            <a href="#safety" className="hover:text-white transition-colors">Safety</a>
           </div>
           <a href="/api/login" data-testid="button-login-nav">
-            <Button className="gap-2"><LogIn className="h-4 w-4" /> Sign In</Button>
+            <Button variant="outline" className="gap-2 border-white/20 text-white bg-white/5 hover:bg-white/10 hover:text-white">
+              <LogIn className="h-4 w-4" /> Sign in
+            </Button>
           </a>
         </div>
       </nav>
 
-      <section className="pt-24 pb-16 md:pt-32 md:pb-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="grid gap-12 md:grid-cols-2 items-center">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                Available Nationwide
-              </div>
-              <h1 className="text-4xl font-serif font-bold tracking-tight md:text-5xl lg:text-6xl">
-                Professional{" "}
-                <span className="text-primary">Cleaning Services</span>{" "}
-                You Can Trust
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-md">
-                Residential, commercial, and vacation rental cleaning — wherever you are.
-                Book vetted professionals, get instant quotes, and enjoy spotless spaces every time.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a href="/api/login" data-testid="button-get-started">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto">
-                    Book a Cleaning <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </a>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span>Insured & Vetted</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-primary" />
-                  <span>4.9 Avg Rating</span>
-                </div>
-              </div>
+      {/* Hero */}
+      <section className="relative bg-black min-h-[92vh] flex items-center overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+        <div className="relative z-10 mx-auto max-w-6xl px-6 py-32 w-full">
+          <div className="max-w-2xl space-y-8">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-xs text-white/70 backdrop-blur-sm">
+              <Sparkles className="h-3 w-3" />
+              On-demand cleaning, nationwide
             </div>
-            <div className="relative">
-              <img
-                src={heroImage}
-                alt="Professional cleaning service"
-                className="rounded-xl ring-1 ring-black/5 shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
-                data-testid="img-hero"
-              />
-              <div className="absolute -bottom-4 -left-4 rounded-lg border bg-background p-3 shadow-lg">
-                <div className="flex items-center gap-2">
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <span className="text-sm font-medium">500+ 5-star reviews</span>
-                </div>
-              </div>
+            <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-[1.05]">
+              Spotless.{" "}
+              <span className="sweepello-gradient bg-clip-text text-transparent">On demand.</span>
+            </h1>
+            <p className="text-lg md:text-xl text-white/60 max-w-lg leading-relaxed">
+              Book a vetted professional cleaner in minutes. Residential, commercial, and Airbnb turnovers — wherever you are.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <a href="/api/login" data-testid="button-get-started">
+                <Button size="lg" className="gap-2 text-base px-8 py-6 rounded-xl font-semibold bg-white text-black hover:bg-white/90">
+                  Book a cleaning <ArrowRight className="h-5 w-5" />
+                </Button>
+              </a>
+              <a href="#for-cleaners">
+                <Button size="lg" variant="outline" className="gap-2 text-base px-8 py-6 rounded-xl font-semibold border-white/20 text-white bg-white/5 hover:bg-white/10 hover:text-white">
+                  Earn by cleaning <ChevronRight className="h-5 w-5" />
+                </Button>
+              </a>
             </div>
           </div>
         </div>
-      </section>
 
-      <section id="services" className="py-16 md:py-24 bg-muted/30">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif font-bold">Our Services</h2>
-            <p className="mt-3 text-muted-foreground">Cleaning solutions for every property type</p>
+        {/* Floating stat card */}
+        <div className="absolute bottom-8 right-6 md:right-12 z-10 hidden md:flex gap-4">
+          <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 text-white text-center">
+            <p className="text-3xl font-extrabold">4.9</p>
+            <div className="flex justify-center gap-0.5 mt-1">
+              {[1,2,3,4,5].map(i => <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />)}
+            </div>
+            <p className="text-xs text-white/50 mt-1">Avg cleaner rating</p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-residential">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-primary" />
-              <CardContent className="pt-8 space-y-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
-                  <Home className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="font-semibold text-xl">Residential</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Keep your home spotless with regular maintenance, deep cleans, or move-out services. Perfect for homeowners and renters nationwide.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Standard & deep cleaning</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Move-out / move-in prep</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Basements & large homes</li>
-                </ul>
-              </CardContent>
-            </Card>
-            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-commercial">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
-              <CardContent className="pt-8 space-y-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-500/10">
-                  <Building2 className="h-7 w-7 text-blue-500" />
-                </div>
-                <h3 className="font-semibold text-xl">Commercial</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Professional cleaning for offices, retail spaces, and commercial properties. Reliable teams that work around your business schedule.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> Office & retail cleaning</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> After-hours availability</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" /> Recurring schedules</li>
-                </ul>
-              </CardContent>
-            </Card>
-            <Card className="bg-background hover:shadow-md transition-shadow border relative overflow-hidden" data-testid="card-service-rental">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
-              <CardContent className="pt-8 space-y-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500/10">
-                  <Hotel className="h-7 w-7 text-amber-500" />
-                </div>
-                <h3 className="font-semibold text-xl">Vacation Rentals</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Fast turnovers for Airbnb, VRBO, and short-term rentals. Guest-ready properties between every booking, coast to coast.
-                </p>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Quick turnovers</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Linen & restocking</li>
-                  <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Photo-ready finish</li>
-                </ul>
-              </CardContent>
-            </Card>
+          <div className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 text-white text-center">
+            <p className="text-3xl font-extrabold">&lt;5 min</p>
+            <p className="text-xs text-white/50 mt-3">Average booking time</p>
           </div>
         </div>
       </section>
 
-      <section id="features" className="py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif font-bold">Why Choose Sweepello?</h2>
-            <p className="mt-3 text-muted-foreground">Built for reliability, transparency, and quality</p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <MapPin className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">Location Matched</h3>
-                <p className="text-sm text-muted-foreground">
-                  We connect you with cleaners in your area for fast, reliable service right when you need it.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">Instant Quotes</h3>
-                <p className="text-sm text-muted-foreground">
-                  Get a transparent price estimate based on your property size and service type — no surprises.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-muted/30 hover:bg-muted/50 transition-colors border-0 shadow-sm">
-              <CardContent className="pt-6 text-center space-y-3">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Star className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">Rate & Review</h3>
-                <p className="text-sm text-muted-foreground">
-                  After each cleaning, rate your experience and help us maintain top-quality service.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Stats bar */}
+      <section className="bg-black border-b border-white/10">
+        <div className="mx-auto max-w-6xl px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {[
+            { value: "500K+", label: "Cleanings completed" },
+            { value: "10K+", label: "Verified cleaners" },
+            { value: "50 states", label: "Nationwide coverage" },
+            { value: "30%", label: "Avg savings vs traditional" },
+          ].map(stat => (
+            <div key={stat.label} className="text-center">
+              <p className="text-3xl md:text-4xl font-extrabold text-white">{stat.value}</p>
+              <p className="text-sm text-white/40 mt-1">{stat.label}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section id="how-it-works" className="py-16 md:py-24 bg-muted/30">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif font-bold">How It Works</h2>
+      {/* How it works — Client */}
+      <section id="how-it-works" className="py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-16">
+            <p className="text-sm font-semibold text-primary uppercase tracking-widest mb-3">For property owners</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Clean in 3 taps.</h2>
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid md:grid-cols-3 gap-10">
             {[
-              { step: "1", title: "Create Your Account", desc: "Sign up in seconds with your Google, GitHub, or email." },
-              { step: "2", title: "Request a Cleaning", desc: "Tell us your property details, choose a service type, and pick a date." },
-              { step: "3", title: "Sit Back & Rate", desc: "We match you with a top-rated local cleaner. After the job, leave a review." },
+              {
+                step: "01",
+                title: "Tell us about your space",
+                desc: "Enter your property type, size, and the service you need — standard, deep clean, or Airbnb turnover.",
+              },
+              {
+                step: "02",
+                title: "We match you instantly",
+                desc: "Our algorithm finds the best available cleaner near you, ranked by rating and on-time performance.",
+              },
+              {
+                step: "03",
+                title: "Track, then rate",
+                desc: "Watch your cleaner on a live map. After the job, leave a star rating to keep quality high.",
+              },
             ].map(item => (
-              <div key={item.step} className="text-center space-y-3">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
-                  {item.step}
-                </div>
-                <h3 className="font-semibold">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
+              <div key={item.step} className="group space-y-4">
+                <p className="text-6xl font-extrabold text-muted-foreground/20 group-hover:text-primary/30 transition-colors">{item.step}</p>
+                <h3 className="text-xl font-bold">{item.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
-          <div className="mt-12 text-center">
-            <a href="/api/login" data-testid="button-get-started-bottom">
-              <Button size="lg" className="gap-2">
-                Get Started Free <ArrowRight className="h-4 w-4" />
+          <div className="mt-12">
+            <a href="/api/login" data-testid="button-book-now">
+              <Button size="lg" className="gap-2 px-8 py-6 rounded-xl text-base font-semibold">
+                Book now <ArrowRight className="h-5 w-5" />
               </Button>
             </a>
-            <p className="mt-3 text-xs text-muted-foreground">No credit card required</p>
           </div>
         </div>
       </section>
 
-      <section id="portals" className="py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-serif font-bold">Log In to Your Portal</h2>
-            <p className="mt-3 text-muted-foreground">One account, three experiences — sign in and you'll be directed to your dashboard</p>
+      {/* Service types */}
+      <section className="py-20 bg-muted/30">
+        <div className="mx-auto max-w-6xl px-6">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-12">What we clean.</h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              {
+                label: "Residential",
+                desc: "Homes, apartments, condos. Regular maintenance or one-off deep cleans.",
+                items: ["Standard & deep cleaning", "Move-out / move-in prep", "Large homes & basements"],
+                accent: "bg-primary/10 text-primary",
+              },
+              {
+                label: "Commercial",
+                desc: "Offices, retail, and commercial spaces. After-hours teams that work around you.",
+                items: ["Office & retail spaces", "After-hours availability", "Recurring schedules"],
+                accent: "bg-blue-500/10 text-blue-500",
+              },
+              {
+                label: "Vacation Rentals",
+                desc: "Airbnb, VRBO, short-term rentals. Guest-ready between every booking, coast to coast.",
+                items: ["Fast turnovers", "Linen & restocking", "Photo-ready finish"],
+                accent: "bg-amber-500/10 text-amber-500",
+              },
+            ].map(s => (
+              <div
+                key={s.label}
+                className="rounded-2xl border bg-background p-8 space-y-5 hover:shadow-lg transition-shadow"
+                data-testid={`card-service-${s.label.toLowerCase().replace(" ", "-")}`}
+              >
+                <h3 className="text-xl font-bold">{s.label}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                <ul className="space-y-2">
+                  {s.items.map(item => (
+                    <li key={item} className="flex items-center gap-2 text-sm">
+                      <CheckCircle className={`h-4 w-4 flex-shrink-0 ${s.accent.split(" ")[1]}`} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <a href="/api/login" data-testid="portal-client">
-              <Card className="bg-background hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer border-2 h-full">
-                <CardContent className="pt-8 pb-6 text-center space-y-4">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                    <Users className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-xl">Client Portal</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Request cleaning services, track your bookings, view quotes, and rate your cleaners.
-                  </p>
-                  <Button variant="outline" className="gap-2 w-full">
-                    <LogIn className="h-4 w-4" /> Sign In as Client
-                  </Button>
-                </CardContent>
-              </Card>
-            </a>
-            <div className="flex flex-col gap-3">
-              <a href="/api/login" data-testid="portal-contractor">
-                <Card className="bg-background hover:shadow-lg hover:border-emerald-500/40 transition-all cursor-pointer border-2 h-full">
-                  <CardContent className="pt-8 pb-6 text-center space-y-4">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
-                      <HardHat className="h-8 w-8 text-emerald-600" />
+        </div>
+      </section>
+
+      {/* Safety / Trust */}
+      <section id="safety" className="py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div className="space-y-6">
+              <p className="text-sm font-semibold text-primary uppercase tracking-widest">Safety first</p>
+              <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Every cleaner, vetted.</h2>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                We don't let just anyone through the door. Every contractor on Sweepello completes a multi-step onboarding, background verification, and insurance check before their first job.
+              </p>
+              <ul className="space-y-4">
+                {[
+                  { icon: Shield, text: "Background & identity verified" },
+                  { icon: CheckCircle, text: "Liability insurance confirmed" },
+                  { icon: Star, text: "Rated after every job" },
+                  { icon: Clock, text: "On-time performance tracked" },
+                  { icon: MapPin, text: "Live GPS during active jobs" },
+                ].map(({ icon: Icon, text }) => (
+                  <li key={text} className="flex items-center gap-3 text-sm font-medium">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                      <Icon className="h-4 w-4 text-primary" />
                     </div>
-                    <h3 className="font-semibold text-xl">Contractor Portal</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      View and accept job offers, manage your availability, update job progress, and get paid.
-                    </p>
-                    <Button variant="outline" className="gap-2 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950">
-                      <LogIn className="h-4 w-4" /> Sign In as Contractor
-                    </Button>
-                  </CardContent>
-                </Card>
-              </a>
-              <a href="/apply" data-testid="link-apply-contractor">
-                <Card className="bg-emerald-50 dark:bg-emerald-950/40 hover:shadow-md transition-all cursor-pointer border border-emerald-200 dark:border-emerald-800">
-                  <CardContent className="py-4 text-center">
-                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">New to Sweepello?</p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Apply to join our contractor network →</p>
-                  </CardContent>
-                </Card>
-              </a>
+                    {text}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <a href="/api/login" data-testid="portal-admin">
-              <Card className="bg-background hover:shadow-lg hover:border-blue-500/40 transition-all cursor-pointer border-2 h-full">
-                <CardContent className="pt-8 pb-6 text-center space-y-4">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/10">
-                    <LayoutDashboard className="h-8 w-8 text-blue-600" />
+            <div className="rounded-3xl bg-muted/40 border p-10 space-y-6">
+              <p className="text-5xl font-extrabold">4.9 ★</p>
+              <p className="text-muted-foreground">Average cleaner rating across all completed jobs</p>
+              <div className="h-px bg-border" />
+              <div className="grid grid-cols-2 gap-6">
+                {[
+                  { val: "98%", label: "Jobs completed on time" },
+                  { val: "< 2%", label: "Complaints rate" },
+                  { val: "92%", label: "Repeat booking rate" },
+                  { val: "24/7", label: "Support available" },
+                ].map(s => (
+                  <div key={s.label}>
+                    <p className="text-2xl font-extrabold">{s.val}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
                   </div>
-                  <h3 className="font-semibold text-xl">Admin Portal</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Manage dispatch, track jobs and payments, view analytics, and oversee cleaner performance.
-                  </p>
-                  <Button variant="outline" className="gap-2 w-full border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950">
-                    <LogIn className="h-4 w-4" /> Sign In as Admin
-                  </Button>
-                </CardContent>
-              </Card>
-            </a>
+                ))}
+              </div>
+            </div>
           </div>
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            All portals use the same sign-in. Your role determines which dashboard you see.
-          </p>
         </div>
       </section>
 
-      <footer className="border-t py-8">
-        <div className="mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Sweepello</span>
+      {/* For cleaners */}
+      <section id="for-cleaners" className="py-24 md:py-32 bg-black text-white">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+              <p className="text-sm font-semibold text-primary uppercase tracking-widest">For cleaning professionals</p>
+              <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight">Earn on your schedule.</h2>
+              <p className="text-white/60 text-lg leading-relaxed">
+                Join thousands of cleaning professionals who use Sweepello to fill their calendar, get paid fast via direct deposit, and grow their business — on their own terms.
+              </p>
+              <ul className="space-y-4">
+                {[
+                  "Set your own availability and zip codes",
+                  "Accept or decline jobs — you're always in control",
+                  "Get paid directly via Stripe after every job",
+                  "Build a reputation with client reviews",
+                ].map(text => (
+                  <li key={text} className="flex items-center gap-3 text-sm text-white/70">
+                    <CheckCircle className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                    {text}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-4">
+                <a href="/apply" data-testid="button-apply-contractor">
+                  <Button size="lg" className="gap-2 px-8 py-6 rounded-xl text-base font-semibold bg-white text-black hover:bg-white/90">
+                    Apply to clean <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </a>
+                <a href="/api/login" data-testid="button-login-contractor">
+                  <Button size="lg" variant="outline" className="gap-2 px-8 py-6 rounded-xl text-base font-semibold border-white/20 text-white bg-white/5 hover:bg-white/10 hover:text-white">
+                    Sign in
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { val: "10K+", label: "Active cleaners" },
+                { val: "$28/hr", label: "Average earnings" },
+                { val: "2-day", label: "Payout speed" },
+                { val: "Free", label: "To join" },
+              ].map(s => (
+                <div key={s.label} className="rounded-2xl bg-white/5 border border-white/10 p-6 space-y-1 hover:bg-white/10 transition-colors">
+                  <p className="text-3xl font-extrabold text-white">{s.val}</p>
+                  <p className="text-sm text-white/40">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-24 md:py-32 text-center">
+        <div className="mx-auto max-w-3xl px-6 space-y-8">
+          <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">
+            Ready for a{" "}
+            <span className="sweepello-gradient bg-clip-text text-transparent">cleaner space?</span>
+          </h2>
+          <p className="text-muted-foreground text-lg">
+            Join thousands of homeowners and property managers who trust Sweepello nationwide.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/api/login" data-testid="button-get-started-bottom">
+              <Button size="lg" className="gap-2 text-base px-10 py-6 rounded-xl font-semibold">
+                Get started free <ArrowRight className="h-5 w-5" />
+              </Button>
+            </a>
+            <a href="/apply" data-testid="button-apply-bottom">
+              <Button size="lg" variant="outline" className="gap-2 text-base px-10 py-6 rounded-xl font-semibold">
+                Join as a cleaner
+              </Button>
+            </a>
+          </div>
+          <p className="text-xs text-muted-foreground">No credit card required · Cancel anytime</p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t py-10">
+        <div className="mx-auto max-w-6xl px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <span
+            className="text-xl font-bold sweepello-gradient"
+            style={{ fontFamily: "'Pacifico', cursive" }}
+          >
+            Sweepello
+          </span>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a>
+            <a href="#for-cleaners" className="hover:text-foreground transition-colors">For cleaners</a>
+            <a href="#safety" className="hover:text-foreground transition-colors">Safety</a>
+            <a href="/apply" className="hover:text-foreground transition-colors">Apply</a>
           </div>
           <p className="text-xs text-muted-foreground">&copy; 2026 Sweepello. All rights reserved.</p>
         </div>
