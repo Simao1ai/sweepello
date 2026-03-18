@@ -8,9 +8,9 @@ enum Configuration {
             return url
         }
         #if DEBUG
-        return "http://localhost:5000"
+        return "https://CleanMatch.replit.app"
         #else
-        return "https://your-sweepello-app.replit.app"
+        return "https://CleanMatch.replit.app"
         #endif
     }()
 
