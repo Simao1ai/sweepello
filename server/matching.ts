@@ -302,3 +302,13 @@ export async function declineJobOffer(offerId: string, cleanerId: string): Promi
 
   return { success: true, message: "Offer declined" };
 }
+
+export function calculateSurgeMultiplier(onlineCleaners: number, activeRequests: number): number {
+  if (onlineCleaners === 0) return 1.5;
+  const ratio = onlineCleaners / Math.max(activeRequests, 1);
+  if (ratio >= 2.0) return 1.0;
+  if (ratio >= 1.5) return 1.1;
+  if (ratio >= 1.0) return 1.25;
+  if (ratio >= 0.5) return 1.5;
+  return 1.75;
+}

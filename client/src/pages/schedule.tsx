@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, ChevronRight, MapPin, User, Clock, DollarSign, Send, Radio, Home, Building2, Hotel } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, User, Clock, DollarSign, Send, Radio, Home, Building2, Hotel, Wifi } from "lucide-react";
 import type { Cleaner, ServiceRequest } from "@shared/schema";
+import LiveMap from "@/components/live-map";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 interface CalendarEvent {
   id: string;
@@ -38,6 +40,8 @@ export default function Schedule() {
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [selectedCleaner, setSelectedCleaner] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [liveLocations, setLiveLocations] = useState<Map<string, { lat: number; lng: number; name: string }>>(new Map());
 
   const { data: events, isLoading: eventsLoading } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/calendar"],
@@ -50,6 +54,50 @@ export default function Schedule() {
   const { data: serviceRequests } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests"],
   });
+
+  const { data: onlineCleaners } = useQuery<Cleaner[]>({
+    queryKey: ["/api/admin/online-cleaners"],
+    refetchInterval: 30000,
+    enabled: showMap,
+  });
+
+  const handleWsMessage = useCallback((msg: any) => {
+    if (msg.type === "cleaner_location" || msg.type === "cleaner_online") {
+      setLiveLocations(prev => {
+        const next = new Map(prev);
+        next.set(msg.cleanerId, { lat: msg.lat, lng: msg.lng, name: msg.cleanerName || msg.name || "Cleaner" });
+        return next;
+      });
+    }
+    if (msg.type === "cleaner_offline") {
+      setLiveLocations(prev => {
+        const next = new Map(prev);
+        next.delete(msg.cleanerId);
+        return next;
+      });
+    }
+  }, []);
+
+  useWebSocket(handleWsMessage);
+
+  const mapMarkers = [
+    ...(onlineCleaners || [])
+      .filter(c => c.currentLat && c.currentLng)
+      .map(c => ({
+        cleanerId: c.id,
+        name: c.name,
+        lat: Number(c.currentLat),
+        lng: Number(c.currentLng),
+        isOnline: true,
+      })),
+    ...Array.from(liveLocations.entries()).map(([cleanerId, loc]) => ({
+      cleanerId,
+      name: loc.name,
+      lat: loc.lat,
+      lng: loc.lng,
+      isOnline: true,
+    })),
+  ];
 
   const assignMutation = useMutation({
     mutationFn: async ({ requestId, cleanerId }: { requestId: string; cleanerId: string }) => {
@@ -120,17 +168,49 @@ export default function Schedule() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Schedule</h1>
           <p className="text-muted-foreground text-sm">Manage cleaner assignments and availability</p>
         </div>
-        {pendingRequests.length > 0 && (
-          <Badge variant="destructive" className="text-sm" data-testid="badge-pending-count">
-            {pendingRequests.length} Pending Request{pendingRequests.length > 1 ? "s" : ""}
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant={showMap ? "default" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => setShowMap(!showMap)}
+            data-testid="button-toggle-map"
+          >
+            <Wifi className="h-4 w-4" />
+            {showMap ? "Hide Live Map" : "Live Cleaner Map"}
+            {mapMarkers.length > 0 && (
+              <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 ml-1">{mapMarkers.length} online</Badge>
+            )}
+          </Button>
+          {pendingRequests.length > 0 && (
+            <Badge variant="destructive" className="text-sm" data-testid="badge-pending-count">
+              {pendingRequests.length} Pending Request{pendingRequests.length > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
       </div>
+
+      {showMap && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wifi className="h-4 w-4 text-emerald-500" />
+              Online Cleaners – Live Positions
+              {mapMarkers.length === 0 && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">No cleaners currently online</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LiveMap height="300px" markers={mapMarkers} zoom={10} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card>

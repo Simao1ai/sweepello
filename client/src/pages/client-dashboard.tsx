@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +16,14 @@ import {
   DollarSign,
   Sparkles,
   Home,
+  MessageCircle,
+  Navigation,
 } from "lucide-react";
 import type { ServiceRequest } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
+import LiveMap from "@/components/live-map";
+import JobChat from "@/components/job-chat";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
@@ -36,12 +43,36 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+interface CleanerLocation {
+  cleanerId: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export default function ClientDashboard() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const [cleanerLocations, setCleanerLocations] = useState<Map<string, CleanerLocation>>(new Map());
+  const [activeChatJobId, setActiveChatJobId] = useState<string | null>(null);
 
   const { data: bookings, isLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests/mine"],
   });
+
+  const { data: profile } = useQuery<any>({ queryKey: ["/api/profile"] });
+
+  const handleWsMessage = useCallback((msg: any) => {
+    if (msg.type === "cleaner_location" || msg.type === "cleaner_online") {
+      setCleanerLocations(prev => {
+        const next = new Map(prev);
+        next.set(msg.cleanerId, { cleanerId: msg.cleanerId, name: msg.name || "Cleaner", lat: msg.lat, lng: msg.lng });
+        return next;
+      });
+    }
+  }, []);
+
+  useWebSocket(handleWsMessage);
 
   const activeBookings = bookings?.filter(b =>
     b.status !== "completed" && b.status !== "cancelled"
@@ -52,6 +83,15 @@ export default function ClientDashboard() {
   const upcomingBookings = activeBookings
     .sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime())
     .slice(0, 4);
+
+  const inProgressBooking = activeBookings.find(b => b.status === "in_progress");
+  const mapMarkers = Array.from(cleanerLocations.values()).map(cl => ({
+    cleanerId: cl.cleanerId,
+    name: cl.name,
+    lat: cl.lat,
+    lng: cl.lng,
+    isOnline: true,
+  }));
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -64,6 +104,20 @@ export default function ClientDashboard() {
           <Plus className="h-4 w-4" /> Book a Cleaning
         </Button>
       </div>
+
+      {inProgressBooking && mapMarkers.length > 0 && (
+        <Card className="border-purple-200 dark:border-purple-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-purple-700 dark:text-purple-400">
+              <Navigation className="h-4 w-4 animate-pulse" />
+              Cleaner En Route – Live Tracking
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LiveMap height="220px" markers={mapMarkers} className="border-purple-200 dark:border-purple-800" />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
@@ -163,11 +217,27 @@ export default function ClientDashboard() {
                       <Badge className={statusColors[booking.status] || "bg-muted"} variant="secondary">
                         {statusLabels[booking.status] || booking.status}
                       </Badge>
+                      {booking.isOnDemand && (
+                        <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px]">⚡ On-Demand</Badge>
+                      )}
                     </div>
                   </div>
-                  {booking.estimatedPrice && (
-                    <span className="text-sm font-semibold shrink-0">${Number(booking.estimatedPrice).toFixed(0)}</span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {booking.estimatedPrice && (
+                      <span className="text-sm font-semibold">${Number(booking.estimatedPrice).toFixed(0)}</span>
+                    )}
+                    {booking.jobId && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setActiveChatJobId(activeChatJobId === booking.jobId ? null : booking.jobId!)}
+                        data-testid={`button-chat-booking-${booking.id}`}
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (
@@ -232,6 +302,16 @@ export default function ClientDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {activeChatJobId && user && (
+        <JobChat
+          jobId={activeChatJobId}
+          currentUserId={user.id}
+          currentUserRole="client"
+          currentUserName={profile?.name || "Client"}
+          otherPartyName="Your Cleaner"
+        />
+      )}
     </div>
   );
 }

@@ -7,11 +7,14 @@ import {
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
   insertContractorOnboardingSchema, insertContractorApplicationSchema, insertDisputeSchema,
+  insertMessageSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
-import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners } from "./matching";
+import { z } from "zod";
+import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners, calculateSurgeMultiplier } from "./matching";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sendApplicationApprovedEmail, sendApplicationRejectedEmail } from "./sendgrid";
+import { sendToUser, broadcast, broadcastToRole } from "./ws";
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -1290,6 +1293,146 @@ export async function registerRoutes(
     const allReviews = await storage.getReviews();
     const filtered = allReviews.filter(r => r.clientId === req.params.clientId);
     res.json(filtered);
+  });
+
+  // === CONTRACTOR: GO ONLINE / OFFLINE ===
+  app.patch("/api/contractor/online-status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") return res.status(403).json({ message: "Contractor only" });
+
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "Cleaner profile not found" });
+
+      const { isOnline, lat, lng } = req.body;
+      const updated = await storage.updateCleanerOnlineStatus(cleaner.id, isOnline, lat, lng);
+
+      broadcast({
+        type: isOnline ? "cleaner_online" : "cleaner_offline",
+        cleanerId: cleaner.id,
+        cleanerName: cleaner.name,
+        lat,
+        lng,
+      });
+
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // === CONTRACTOR: GET ONLINE STATUS ===
+  app.get("/api/contractor/online-status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "Cleaner not found" });
+      res.json({ isOnline: cleaner.isOnline, currentLat: cleaner.currentLat, currentLng: cleaner.currentLng });
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // === ADMIN: GET ALL ONLINE CLEANERS (FOR MAP) ===
+  app.get("/api/admin/online-cleaners", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const onlineCleaners = await storage.getOnlineCleaners();
+      res.json(onlineCleaners);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // === MESSAGES: GET MESSAGES FOR A JOB ===
+  app.get("/api/messages/:jobId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(403).json({ message: "Not authorized" });
+      const msgs = await storage.getMessagesByJobId(req.params.jobId);
+      res.json(msgs);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // === MESSAGES: SEND A MESSAGE ===
+  app.post("/api/messages", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(403).json({ message: "Not authorized" });
+
+      const parsed = insertMessageSchema.parse(req.body);
+      parsed.senderId = userId;
+
+      const message = await storage.createMessage(parsed);
+
+      broadcast({
+        type: "new_message",
+        jobId: message.jobId,
+        message,
+      });
+
+      res.json(message);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === CONTRACTOR: RATE CLIENT AFTER JOB ===
+  app.post("/api/contractor/jobs/:jobId/rate-client", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "contractor") return res.status(403).json({ message: "Contractor only" });
+
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "Cleaner not found" });
+
+      const job = await storage.getJob(req.params.jobId);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+      if (job.cleanerId !== cleaner.id) return res.status(403).json({ message: "Not your job" });
+
+      const { rating, note } = z.object({ rating: z.number().min(1).max(5), note: z.string().optional().default("") }).parse(req.body);
+      const updated = await storage.rateClientForJob(job.id, rating, note);
+
+      const serviceReqs = await storage.getServiceRequests();
+      const sr = serviceReqs.find(s => s.jobId === job.id || s.id === job.serviceRequestId);
+      if (sr) {
+        const clientRecord = await storage.getClientByUserId(sr.userId);
+        if (clientRecord) {
+          const count = (clientRecord.clientRatingCount || 0) + 1;
+          const prevRating = Number(clientRecord.clientRating || 5);
+          const newRating = ((prevRating * (count - 1)) + rating) / count;
+          await storage.updateClient(clientRecord.id, {
+            clientRating: newRating.toFixed(2),
+            clientRatingCount: count,
+          });
+        }
+      }
+
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  // === SURGE PRICING ===
+  app.get("/api/surge", async (req, res) => {
+    try {
+      const onlineCleaners = await storage.getOnlineCleaners();
+      const allRequests = await storage.getServiceRequests();
+      const activeRequests = allRequests.filter(r => ["pending", "broadcasting", "matching"].includes(r.status));
+      const multiplier = calculateSurgeMultiplier(onlineCleaners.length, activeRequests.length);
+      res.json({ multiplier, onlineCount: onlineCleaners.length, activeRequests: activeRequests.length });
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
   });
 
   return httpServer;

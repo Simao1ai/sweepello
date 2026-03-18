@@ -6,6 +6,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { setupWebSocket } from "./ws";
 
 const app = express();
 const httpServer = createServer(app);
@@ -142,6 +143,7 @@ export function log(message: string, source = "express") {
 
   await setupAuth(app);
   registerAuthRoutes(app);
+  setupWebSocket(httpServer);
 
   const { seedDatabase } = await import("./seed");
   await seedDatabase().catch((err) => console.error("Seed error:", err));

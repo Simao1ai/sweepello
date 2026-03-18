@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -15,6 +15,7 @@ import {
   type ContractorOnboarding, type InsertContractorOnboarding,
   type ContractorApplication, type InsertContractorApplication,
   type Dispute, type InsertDispute,
+  type Message, type InsertMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -90,6 +91,15 @@ export interface IStorage {
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(data: InsertDispute): Promise<Dispute>;
   updateDispute(id: string, data: Partial<Dispute>): Promise<Dispute | undefined>;
+
+  getMessagesByJobId(jobId: string): Promise<Message[]>;
+  createMessage(data: InsertMessage): Promise<Message>;
+
+  getOnlineCleaners(): Promise<Cleaner[]>;
+  updateCleanerOnlineStatus(cleanerId: string, isOnline: boolean, lat?: number, lng?: number): Promise<Cleaner | undefined>;
+
+  rateClientForJob(jobId: string, rating: number, note: string): Promise<Job | undefined>;
+  getCleanerByUserIdForUpdate(userId: string): Promise<Cleaner | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -365,6 +375,39 @@ export class DatabaseStorage implements IStorage {
   async updateDispute(id: string, data: Partial<Dispute>): Promise<Dispute | undefined> {
     const [dispute] = await db.update(disputes).set(data).where(eq(disputes.id, id)).returning();
     return dispute;
+  }
+
+  async getMessagesByJobId(jobId: string): Promise<Message[]> {
+    return db.select().from(messages).where(eq(messages.jobId, jobId));
+  }
+
+  async createMessage(data: InsertMessage): Promise<Message> {
+    const [message] = await db.insert(messages).values(data).returning();
+    return message;
+  }
+
+  async getOnlineCleaners(): Promise<Cleaner[]> {
+    return db.select().from(cleaners).where(eq(cleaners.isOnline, true));
+  }
+
+  async updateCleanerOnlineStatus(cleanerId: string, isOnline: boolean, lat?: number, lng?: number): Promise<Cleaner | undefined> {
+    const updateData: Partial<Cleaner> = { isOnline, lastSeenAt: new Date() };
+    if (lat !== undefined) updateData.currentLat = lat.toString();
+    if (lng !== undefined) updateData.currentLng = lng.toString();
+    const [cleaner] = await db.update(cleaners).set(updateData).where(eq(cleaners.id, cleanerId)).returning();
+    return cleaner;
+  }
+
+  async rateClientForJob(jobId: string, rating: number, note: string): Promise<Job | undefined> {
+    const [job] = await db.update(jobs)
+      .set({ clientRating: rating, clientRatingNote: note })
+      .where(eq(jobs.id, jobId))
+      .returning();
+    return job;
+  }
+
+  async getCleanerByUserIdForUpdate(userId: string): Promise<Cleaner | undefined> {
+    return this.getCleanerByUserId(userId);
   }
 }
 

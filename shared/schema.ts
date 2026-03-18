@@ -33,6 +33,8 @@ export const clients = pgTable("clients", {
   isActive: boolean("is_active").notNull().default(true),
   isVip: boolean("is_vip").notNull().default(false),
   adminNote: text("admin_note"),
+  clientRating: decimal("client_rating", { precision: 3, scale: 2 }),
+  clientRatingCount: integer("client_rating_count").default(0),
 });
 
 export const cleaners = pgTable("cleaners", {
@@ -52,6 +54,10 @@ export const cleaners = pgTable("cleaners", {
   zipCodes: text("zip_codes"),
   isFeatured: boolean("is_featured").notNull().default(false),
   adminNote: text("admin_note"),
+  isOnline: boolean("is_online").notNull().default(false),
+  currentLat: decimal("current_lat", { precision: 10, scale: 7 }),
+  currentLng: decimal("current_lng", { precision: 10, scale: 7 }),
+  lastSeenAt: timestamp("last_seen_at"),
 });
 
 export const cleanerAvailability = pgTable("cleaner_availability", {
@@ -84,6 +90,8 @@ export const serviceRequests = pgTable("service_requests", {
   preferredCleanerId: varchar("preferred_cleaner_id"),
   jobId: varchar("job_id"),
   squareFootage: integer("square_footage"),
+  isOnDemand: boolean("is_on_demand").notNull().default(false),
+  surgeMultiplier: decimal("surge_multiplier", { precision: 4, scale: 2 }).default("1.00"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -99,6 +107,8 @@ export const jobs = pgTable("jobs", {
   profit: decimal("profit", { precision: 10, scale: 2 }),
   serviceRequestId: varchar("service_request_id"),
   notes: text("notes"),
+  clientRating: integer("client_rating"),
+  clientRatingNote: text("client_rating_note"),
 });
 
 export const payments = pgTable("payments", {
@@ -218,6 +228,17 @@ export const disputes = pgTable("disputes", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  senderRole: text("sender_role").notNull(),
+  senderName: text("sender_name").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertContractorOnboardingSchema = createInsertSchema(contractorOnboarding).omit({ id: true, createdAt: true, updatedAt: true, stripeAccountId: true, stripeOnboardingComplete: true, onboardingStatus: true, agreementSigned: true, agreementSignedAt: true, agreementSignatureName: true, agreementDeclined: true });
 export type ContractorOnboarding = typeof contractorOnboarding.$inferSelect;
 export type InsertContractorOnboarding = z.infer<typeof insertContractorOnboardingSchema>;
@@ -229,6 +250,10 @@ export type InsertContractorApplication = z.infer<typeof insertContractorApplica
 export const insertDisputeSchema = createInsertSchema(disputes).omit({ id: true, createdAt: true, resolvedAt: true, status: true, adminNote: true, resolutionNote: true });
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ id: true, createdAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });

@@ -18,6 +18,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { Job, Notification } from "@shared/schema";
+import GoOnlineToggle from "@/components/go-online-toggle";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 interface ContractorProfile {
   id: string;
@@ -50,6 +52,8 @@ export default function ContractorDashboard() {
     queryKey: ["/api/notifications"],
   });
 
+  useWebSocket();
+
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
   const pendingOffers = notifications?.filter(n => n.type === "job_offer" && !n.isRead).length || 0;
   const activeJobs = jobs?.filter(j => j.status === "assigned" || j.status === "in_progress") || [];
@@ -70,24 +74,28 @@ export default function ContractorDashboard() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
             {profile ? `Welcome back, ${profile.name.split(" ")[0]}` : "Dashboard"}
           </h1>
           <p className="text-muted-foreground">Your contractor overview</p>
         </div>
-        {pendingOffers > 0 && (
-          <Button
-            variant="outline"
-            className="gap-2 border-amber-300 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-            onClick={() => navigate("/contractor/notifications")}
-            data-testid="button-view-offers"
-          >
-            <Bell className="h-4 w-4" />
-            {pendingOffers} New Offer{pendingOffers > 1 ? "s" : ""}
-          </Button>
-        )}
+        <div className="flex flex-col items-end gap-2">
+          <GoOnlineToggle cleanerId={profile?.id} cleanerName={profile?.name} />
+          {pendingOffers > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-amber-300 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+              onClick={() => navigate("/contractor/notifications")}
+              data-testid="button-view-offers"
+            >
+              <Bell className="h-4 w-4" />
+              {pendingOffers} New Offer{pendingOffers > 1 ? "s" : ""}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

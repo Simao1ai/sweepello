@@ -11,7 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck } from "lucide-react";
+import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp } from "lucide-react";
+
+interface SurgeData {
+  multiplier: number;
+  onlineCount: number;
+  activeRequests: number;
+}
 
 const SERVICE_TYPE_INFO: Record<string, { label: string; icon: typeof Home; description: string; rate: string }> = {
   standard: { label: "Standard Clean", icon: Sparkles, description: "Regular maintenance cleaning", rate: "$0.15/sqft" },
@@ -30,6 +36,7 @@ export default function RequestService() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isOnDemand, setIsOnDemand] = useState(false);
 
   const [formData, setFormData] = useState({
     propertyAddress: "",
@@ -54,6 +61,11 @@ export default function RequestService() {
     marginPercent: 0,
   });
 
+  const { data: surge } = useQuery<SurgeData>({
+    queryKey: ["/api/surge"],
+    refetchInterval: 30000,
+  });
+
   const { data: previousCleaners } = useQuery<{ id: string; name: string; rating: string }[]>({
     queryKey: ["/api/client/previous-cleaners"],
   });
@@ -73,11 +85,17 @@ export default function RequestService() {
     fetchPrice();
   }, [formData.serviceType, formData.bedrooms, formData.bathrooms, formData.squareFootage, formData.basement]);
 
+  const surgeMultiplier = surge?.multiplier ?? 1.0;
+  const surgeLabel = surgeMultiplier >= 1.5 ? "High Demand" : surgeMultiplier >= 1.25 ? "Moderate Demand" : null;
+  const effectivePrice = Math.round((pricing.estimatedPrice * surgeMultiplier) / 5) * 5;
+
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const requestedDate = isOnDemand ? new Date().toISOString() : new Date(data.requestedDate).toISOString();
       const body: Record<string, unknown> = {
         ...data,
-        requestedDate: new Date(data.requestedDate).toISOString(),
+        requestedDate,
+        isOnDemand,
       };
       if (!data.preferredCleanerId) delete body.preferredCleanerId;
       const res = await apiRequest("POST", "/api/service-requests", body);
@@ -253,35 +271,74 @@ export default function RequestService() {
               <h3 className="font-medium flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4 text-primary" /> Schedule
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Preferred Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    data-testid="input-date"
-                    required
-                    value={formData.requestedDate}
-                    onChange={e => setFormData({ ...formData, requestedDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Preferred Time</Label>
-                  <Select
-                    value={formData.preferredTime}
-                    onValueChange={v => setFormData({ ...formData, preferredTime: v })}
-                  >
-                    <SelectTrigger data-testid="select-time">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="morning">Morning (8am-12pm)</SelectItem>
-                      <SelectItem value="afternoon">Afternoon (12pm-4pm)</SelectItem>
-                      <SelectItem value="evening">Evening (4pm-8pm)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsOnDemand(false)}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${!isOnDemand ? "border-primary bg-primary/5" : "border-muted hover:border-primary/30"}`}
+                  data-testid="button-schedule-mode"
+                >
+                  <Calendar className={`h-5 w-5 mb-1 ${!isOnDemand ? "text-primary" : "text-muted-foreground"}`} />
+                  <p className="text-sm font-medium">Schedule</p>
+                  <p className="text-xs text-muted-foreground">Pick a date & time</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOnDemand(true)}
+                  className={`p-4 rounded-lg border-2 text-left transition-all relative ${isOnDemand ? "border-amber-500 bg-amber-500/5" : "border-muted hover:border-amber-500/30"}`}
+                  data-testid="button-ondemand-mode"
+                >
+                  <Zap className={`h-5 w-5 mb-1 ${isOnDemand ? "text-amber-500" : "text-muted-foreground"}`} />
+                  <p className="text-sm font-medium">Book Now</p>
+                  <p className="text-xs text-muted-foreground">ASAP – online cleaners only</p>
+                  {surgeLabel && isOnDemand && (
+                    <Badge className="absolute top-2 right-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px]">
+                      {surgeLabel}
+                    </Badge>
+                  )}
+                </button>
               </div>
+
+              {isOnDemand ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    We'll contact all online cleaners in your area right now. <strong>ETA: 30–90 minutes</strong>
+                    {surge && ` · ${surge.onlineCount} cleaner${surge.onlineCount !== 1 ? "s" : ""} available`}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Preferred Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      data-testid="input-date"
+                      required={!isOnDemand}
+                      value={formData.requestedDate}
+                      onChange={e => setFormData({ ...formData, requestedDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preferred Time</Label>
+                    <Select
+                      value={formData.preferredTime}
+                      onValueChange={v => setFormData({ ...formData, preferredTime: v })}
+                    >
+                      <SelectTrigger data-testid="select-time">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="morning">Morning (8am-12pm)</SelectItem>
+                        <SelectItem value="afternoon">Afternoon (12pm-4pm)</SelectItem>
+                        <SelectItem value="evening">Evening (4pm-8pm)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {previousCleaners && previousCleaners.length > 0 && (
@@ -322,12 +379,12 @@ export default function RequestService() {
               />
             </div>
 
-            <Card className="bg-muted/50 border-dashed">
+            <Card className={`border-dashed ${surgeLabel && isOnDemand ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-300 dark:border-orange-700" : "bg-muted/50"}`}>
               <CardContent className="py-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <span className="text-sm text-muted-foreground">Your Quote</span>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="secondary" className="text-xs">
                         {SERVICE_TYPE_INFO[formData.serviceType]?.label || formData.serviceType}
                       </Badge>
@@ -335,15 +392,29 @@ export default function RequestService() {
                         {formData.bedrooms}BR / {formData.bathrooms}BA / {formData.squareFootage || "—"} sqft
                         {formData.basement ? " + Basement" : ""}
                       </span>
+                      {surgeLabel && isOnDemand && (
+                        <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs gap-1">
+                          <TrendingUp className="h-3 w-3" /> {surgeMultiplier.toFixed(2)}x {surgeLabel}
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <span className="text-2xl font-bold text-primary" data-testid="text-estimated-price">
-                    ${pricing.estimatedPrice}
-                  </span>
+                  <div className="text-right">
+                    {surgeMultiplier > 1.0 && isOnDemand && (
+                      <div className="text-sm text-muted-foreground line-through">${pricing.estimatedPrice}</div>
+                    )}
+                    <span className={`text-2xl font-bold ${surgeLabel && isOnDemand ? "text-orange-600 dark:text-orange-400" : "text-primary"}`} data-testid="text-estimated-price">
+                      ${surgeMultiplier > 1.0 && isOnDemand ? effectivePrice : pricing.estimatedPrice}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-1 border-t pt-2">
                   <p>Competitive NJ market rate based on your property details.</p>
-                  <p>Final price may vary based on property condition.</p>
+                  {surgeLabel && isOnDemand && (
+                    <p className="text-orange-600 dark:text-orange-400">
+                      Surge pricing applied due to high demand. Price will normalize when more cleaners become available.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -351,19 +422,24 @@ export default function RequestService() {
             <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 flex items-start gap-2">
               <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                Your request will be automatically sent to available cleaners in your area, prioritized by rating. 
-                {formData.preferredCleanerId ? " Your preferred cleaner will get first priority." : ""}
+                {isOnDemand
+                  ? "All available online cleaners will be contacted immediately. The first to accept gets the job."
+                  : `Your request will be automatically sent to available cleaners in your area, prioritized by rating. ${formData.preferredCleanerId ? "Your preferred cleaner will get first priority." : ""}`
+                }
               </p>
             </div>
 
             <Button
               type="submit"
-              className="w-full"
+              className={`w-full ${isOnDemand ? "bg-amber-500 hover:bg-amber-600" : ""}`}
               size="lg"
               disabled={mutation.isPending}
               data-testid="button-submit-request"
             >
-              {mutation.isPending ? "Submitting..." : "Submit Cleaning Request"}
+              {mutation.isPending
+                ? (isOnDemand ? "Finding Cleaners..." : "Submitting...")
+                : (isOnDemand ? "⚡ Book Now – Find a Cleaner ASAP" : "Submit Cleaning Request")
+              }
             </Button>
           </form>
         </CardContent>

@@ -1,11 +1,23 @@
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useWebSocket } from "@/hooks/use-websocket";
+import JobChat from "@/components/job-chat";
 import type { Job } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
@@ -24,26 +36,94 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+interface RatingModalState {
+  open: boolean;
+  jobId: string | null;
+  address: string;
+}
+
+function StarRating({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          onClick={() => onChange(n)}
+          className={`h-8 w-8 transition-colors ${n <= value ? "text-amber-400" : "text-muted-foreground/30 hover:text-amber-300"}`}
+          data-testid={`star-${n}`}
+        >
+          <Star className="h-full w-full fill-current" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ContractorJobs() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [ratingModal, setRatingModal] = useState<RatingModalState>({ open: false, jobId: null, address: "" });
+  const [clientRating, setClientRating] = useState(5);
+  const [clientRatingNote, setClientRatingNote] = useState("");
+  const [activeChatJobId, setActiveChatJobId] = useState<string | null>(null);
 
   const { data: jobs, isLoading } = useQuery<Job[]>({
     queryKey: ["/api/contractor/jobs"],
   });
+
+  const { data: profile } = useQuery<any>({
+    queryKey: ["/api/contractor/profile"],
+  });
+
+  const handleWsMessage = useCallback((msg: any) => {
+    if (msg.type === "job_status_update") {
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
+    }
+  }, []);
+
+  useWebSocket(handleWsMessage);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ jobId, status }: { jobId: string; status: string }) => {
       const res = await apiRequest("PATCH", `/api/contractor/jobs/${jobId}/status`, { status });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
       toast({ title: "Job status updated" });
+      if (vars.status === "completed") {
+        const job = jobs?.find(j => j.id === vars.jobId);
+        if (job) {
+          setClientRating(5);
+          setClientRatingNote("");
+          setRatingModal({ open: true, jobId: job.id, address: job.propertyAddress });
+        }
+      }
     },
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const rateClientMutation = useMutation({
+    mutationFn: async ({ jobId, rating, note }: { jobId: string; rating: number; note: string }) => {
+      const res = await apiRequest("POST", `/api/contractor/jobs/${jobId}/rate-client`, { rating, note });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Thanks for your feedback!", description: "Your rating helps us match better clients." });
+      setRatingModal({ open: false, jobId: null, address: "" });
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error submitting rating", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmitRating = () => {
+    if (!ratingModal.jobId) return;
+    rateClientMutation.mutate({ jobId: ratingModal.jobId, rating: clientRating, note: clientRatingNote });
+  };
 
   const activeJobs = jobs?.filter(j => j.status !== "completed" && j.status !== "cancelled") || [];
   const completedJobs = jobs?.filter(j => j.status === "completed") || [];
@@ -107,7 +187,7 @@ export default function ContractorJobs() {
                             <p className="text-xs text-muted-foreground mt-1">Note: {job.notes}</p>
                           )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {job.status === "assigned" && (
                             <Button
                               size="sm"
@@ -131,6 +211,15 @@ export default function ContractorJobs() {
                               <CheckCircle2 className="h-3.5 w-3.5" /> Complete
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1"
+                            onClick={() => setActiveChatJobId(activeChatJobId === job.id ? null : job.id)}
+                            data-testid={`button-chat-${job.id}`}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" /> Chat
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -158,8 +247,28 @@ export default function ContractorJobs() {
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
                             <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
                             <span>${Number(job.cleanerPay || 0).toFixed(0)} earned</span>
+                            {job.clientRating && (
+                              <span className="flex items-center gap-0.5 text-amber-500">
+                                <Star className="h-3 w-3 fill-current" /> {job.clientRating}/5 client rated
+                              </span>
+                            )}
                           </div>
                         </div>
+                        {!job.clientRating && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1 text-xs"
+                            onClick={() => {
+                              setClientRating(5);
+                              setClientRatingNote("");
+                              setRatingModal({ open: true, jobId: job.id, address: job.propertyAddress });
+                            }}
+                            data-testid={`button-rate-client-${job.id}`}
+                          >
+                            <Star className="h-3 w-3" /> Rate Client
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -168,6 +277,55 @@ export default function ContractorJobs() {
             </div>
           )}
         </div>
+      )}
+
+      <Dialog open={ratingModal.open} onOpenChange={(open) => !open && setRatingModal(prev => ({ ...prev, open: false }))}>
+        <DialogContent data-testid="dialog-rate-client">
+          <DialogHeader>
+            <DialogTitle>Rate this property & client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              How was working at <strong>{ratingModal.address}</strong>? Your feedback helps us match you with better jobs.
+            </p>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Overall Experience</p>
+              <StarRating value={clientRating} onChange={setClientRating} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Notes (optional)</p>
+              <Textarea
+                value={clientRatingNote}
+                onChange={(e) => setClientRatingNote(e.target.value)}
+                placeholder="Was the property clean and organized? Easy access? Good communication?"
+                className="resize-none h-20"
+                data-testid="input-client-rating-note"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setRatingModal(prev => ({ ...prev, open: false }))} data-testid="button-skip-rating">
+              Skip
+            </Button>
+            <Button
+              onClick={handleSubmitRating}
+              disabled={rateClientMutation.isPending}
+              data-testid="button-submit-client-rating"
+            >
+              Submit Rating
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {activeChatJobId && user && (
+        <JobChat
+          jobId={activeChatJobId}
+          currentUserId={user.id}
+          currentUserRole="contractor"
+          currentUserName={profile?.name || "Contractor"}
+          otherPartyName="Client"
+        />
       )}
     </div>
   );

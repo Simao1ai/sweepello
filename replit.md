@@ -17,12 +17,14 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 
 ## Tech Stack (additional)
 - **Email**: SendGrid (via Replit integration) for transactional emails (application approved/rejected)
+- **Real-time**: WebSocket server (ws package) at /ws path for live location, job status, in-app chat
+- **Maps**: Leaflet.js (CDN) + custom LiveMap component for GPS tracking of cleaners
 
 ## Project Structure
 - `client/src/pages/` - Landing, RoleSelection, Dashboard (admin), ClientDashboard, ContractorDashboard, ContractorEarnings, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding, ContractorApply (public)
 - `client/src/pages/admin/` - Applications, ReviewModeration, Disputes, Broadcast
-- `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, UI components
-- `client/src/hooks/` - use-auth.ts (authentication hook)
+- `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, GoOnlineToggle, JobChat, LiveMap, UI components
+- `client/src/hooks/` - use-auth.ts (authentication hook), use-websocket.ts (real-time WS with auto-reconnect)
 - `server/` - Express API routes, Drizzle DB, storage layer, seed data
 - `server/sendgrid.ts` - SendGrid email client (approval/rejection emails)
 - `server/replit_integrations/auth/` - Replit Auth OIDC integration
