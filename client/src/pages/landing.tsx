@@ -49,7 +49,7 @@ export default function Landing() {
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
-                Serving All of New Jersey
+                Available Nationwide
               </div>
               <h1 className="text-4xl font-serif font-bold tracking-tight md:text-5xl lg:text-6xl">
                 Professional{" "}
@@ -57,8 +57,8 @@ export default function Landing() {
                 You Can Trust
               </h1>
               <p className="text-lg text-muted-foreground max-w-md">
-                Residential, commercial, and vacation rental cleaning across New Jersey. 
-                Book vetted professionals, get instant quotes, and enjoy spotless spaces — every time.
+                Residential, commercial, and vacation rental cleaning — wherever you are.
+                Book vetted professionals, get instant quotes, and enjoy spotless spaces every time.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a href="/api/login" data-testid="button-get-started">
@@ -115,7 +115,7 @@ export default function Landing() {
                 </div>
                 <h3 className="font-semibold text-xl">Residential</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Keep your home spotless with regular maintenance, deep cleans, or move-out services. Perfect for homeowners and renters across NJ.
+                  Keep your home spotless with regular maintenance, deep cleans, or move-out services. Perfect for homeowners and renters nationwide.
                 </p>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary flex-shrink-0" /> Standard & deep cleaning</li>
@@ -149,7 +149,7 @@ export default function Landing() {
                 </div>
                 <h3 className="font-semibold text-xl">Vacation Rentals</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Fast turnovers for Airbnb, VRBO, and short-term rentals. Guest-ready properties between every booking at the Jersey Shore and beyond.
+                  Fast turnovers for Airbnb, VRBO, and short-term rentals. Guest-ready properties between every booking, coast to coast.
                 </p>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-amber-500 flex-shrink-0" /> Quick turnovers</li>

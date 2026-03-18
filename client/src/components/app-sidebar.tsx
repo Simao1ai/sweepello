@@ -223,7 +223,7 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
               {role.charAt(0).toUpperCase() + role.slice(1)}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">NJ Shore Market</p>
+          <p className="text-xs text-muted-foreground mt-1">Cleaning Dispatch Platform</p>
         </div>
       </SidebarFooter>
     </Sidebar>

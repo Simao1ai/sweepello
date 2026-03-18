@@ -1,7 +1,7 @@
 # Sweepello - Cleaning Dispatch Platform
 
 ## Overview
-A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business in the NJ Shore market. Features a triple-portal architecture:
+A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business, available nationwide. Features a triple-portal architecture:
 - **Client Portal**: Clients create accounts, request cleaning services, track bookings, and rate completed services
 - **Admin Portal**: Dispatch management with job tracking, cleaner scorecards, scheduling calendar, client management, payments tracking, and analytics
 - **Contractor Portal**: Cleaners log in to view assigned jobs, manage availability, update job status, and receive notifications
