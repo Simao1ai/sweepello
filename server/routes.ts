@@ -47,6 +47,7 @@ export async function registerRoutes(
   app.get("/api/profile", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
     const profile = await storage.getUserProfile(userId);
+    console.log(`[DEBUG /api/profile] userId=${userId} email=${(req as any).user?.claims?.email} role=${profile?.role}`);
     res.json(profile || null);
   });
 
