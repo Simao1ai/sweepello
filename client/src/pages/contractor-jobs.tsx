@@ -12,13 +12,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle } from "lucide-react";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Quote } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import JobChat from "@/components/job-chat";
-import type { Job } from "@shared/schema";
+import type { Job, Review } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
@@ -75,6 +75,15 @@ export default function ContractorJobs() {
     queryKey: ["/api/contractor/profile"],
   });
 
+  const { data: myReviews } = useQuery<Review[]>({
+    queryKey: ["/api/contractor/reviews"],
+  });
+
+  const reviewsByJobId = (myReviews || []).reduce<Record<string, Review>>((acc, r) => {
+    if (r.jobId) acc[r.jobId] = r;
+    return acc;
+  }, {});
+
   const handleWsMessage = useCallback((msg: any) => {
     if (msg.type === "job_status_update") {
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
@@ -114,6 +123,7 @@ export default function ContractorJobs() {
       toast({ title: "Thanks for your feedback!", description: "Your rating helps us match better clients." });
       setRatingModal({ open: false, jobId: null, address: "" });
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/reviews"] });
     },
     onError: (err: Error) => {
       toast({ title: "Error submitting rating", description: err.message, variant: "destructive" });
@@ -235,44 +245,74 @@ export default function ContractorJobs() {
                 Completed ({completedJobs.length})
               </h2>
               <div className="space-y-3">
-                {completedJobs.sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()).map(job => (
-                  <Card key={job.id} className="opacity-75" data-testid={`card-job-${job.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge className={statusColors.completed}>Completed</Badge>
-                            <span className="text-sm text-muted-foreground">{job.propertyAddress}</span>
+                {completedJobs.sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()).map(job => {
+                  const clientReview = reviewsByJobId[job.id];
+                  return (
+                    <Card key={job.id} className="opacity-80" data-testid={`card-job-${job.id}`}>
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className={statusColors.completed}>Completed</Badge>
+                              <span className="text-sm text-muted-foreground truncate">{job.propertyAddress}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
+                              <span>${Number(job.cleanerPay || 0).toFixed(0)} earned</span>
+                              {job.clientRating && (
+                                <span className="flex items-center gap-0.5 text-amber-500">
+                                  <Star className="h-3 w-3 fill-current" /> {job.clientRating}/5 you rated client
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
-                            <span>${Number(job.cleanerPay || 0).toFixed(0)} earned</span>
-                            {job.clientRating && (
-                              <span className="flex items-center gap-0.5 text-amber-500">
-                                <Star className="h-3 w-3 fill-current" /> {job.clientRating}/5 client rated
+                          {!job.clientRating && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1 text-xs shrink-0"
+                              onClick={() => {
+                                setClientRating(5);
+                                setClientRatingNote("");
+                                setRatingModal({ open: true, jobId: job.id, address: job.propertyAddress });
+                              }}
+                              data-testid={`button-rate-client-${job.id}`}
+                            >
+                              <Star className="h-3 w-3" /> Rate Client
+                            </Button>
+                          )}
+                        </div>
+
+                        {clientReview ? (
+                          <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 space-y-1" data-testid={`review-received-${job.id}`}>
+                            <div className="flex items-center gap-2">
+                              <div className="flex gap-0.5">
+                                {[1,2,3,4,5].map(i => (
+                                  <Star key={i} className={`h-3.5 w-3.5 ${i <= clientReview.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                                ))}
+                              </div>
+                              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                Client rated you {clientReview.rating}/5
                               </span>
+                            </div>
+                            {clientReview.comment && (
+                              <div className="flex items-start gap-1.5">
+                                <Quote className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-muted-foreground italic" data-testid={`text-review-comment-${job.id}`}>
+                                  {clientReview.comment}
+                                </p>
+                              </div>
                             )}
                           </div>
-                        </div>
-                        {!job.clientRating && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1 text-xs"
-                            onClick={() => {
-                              setClientRating(5);
-                              setClientRatingNote("");
-                              setRatingModal({ open: true, jobId: job.id, address: job.propertyAddress });
-                            }}
-                            data-testid={`button-rate-client-${job.id}`}
-                          >
-                            <Star className="h-3 w-3" /> Rate Client
-                          </Button>
+                        ) : (
+                          <p className="text-xs text-muted-foreground/60 italic" data-testid={`text-no-review-${job.id}`}>
+                            No client review yet
+                          </p>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}

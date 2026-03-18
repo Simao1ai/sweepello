@@ -183,6 +183,36 @@ export async function registerRoutes(
         const cleanerReviews = allReviews.filter(r => r.cleanerId === job.cleanerId);
         const avgRating = cleanerReviews.reduce((s, r) => s + r.rating, 0) / cleanerReviews.length;
         await storage.updateCleaner(job.cleanerId, { rating: avgRating.toFixed(2) });
+
+        const cleaner = await storage.getCleaner(job.cleanerId);
+        const stars = "⭐".repeat(review.rating);
+        const ratingLabel = review.rating === 5 ? "Excellent" : review.rating === 4 ? "Great" : review.rating === 3 ? "Good" : review.rating === 2 ? "Fair" : "Poor";
+
+        if (cleaner?.userId) {
+          await storage.createNotification({
+            userId: cleaner.userId,
+            title: `New review: ${stars} ${ratingLabel}`,
+            message: review.comment
+              ? `A client rated your service ${review.rating}/5 stars: "${review.comment}"`
+              : `A client rated your service ${review.rating}/5 stars for ${job.propertyAddress}.`,
+            type: "review_received",
+            jobId: job.id,
+          });
+        }
+
+        if (review.rating <= 2) {
+          const allProfiles = await storage.getAllUserProfiles();
+          const adminProfiles = allProfiles.filter(p => p.role === "admin");
+          await Promise.all(adminProfiles.map(p =>
+            storage.createNotification({
+              userId: p.userId,
+              title: `⚠️ Low rating alert: ${review.rating}/5 stars`,
+              message: `Job at ${job.propertyAddress} received a ${review.rating}-star review.${review.comment ? ` Client said: "${review.comment}"` : ""} Please review.`,
+              type: "low_rating_alert",
+              jobId: job.id,
+            })
+          ));
+        }
       }
 
       res.json(review);
@@ -528,6 +558,16 @@ export async function registerRoutes(
     if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
     const contractorJobs = await storage.getJobsByCleanerId(cleaner.id);
     res.json(contractorJobs);
+  });
+
+  app.get("/api/contractor/reviews", isAuthenticated, async (req, res) => {
+    const contractor = await isContractor(req);
+    if (!contractor) return res.status(403).json({ message: "Contractor only" });
+    const userId = getUserId(req);
+    const cleaner = await storage.getCleanerByUserId(userId);
+    if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+    const cleanerReviews = await storage.getReviewsByCleanerId(cleaner.id);
+    res.json(cleanerReviews);
   });
 
   app.get("/api/contractor/availability", isAuthenticated, async (req, res) => {
