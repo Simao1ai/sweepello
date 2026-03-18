@@ -405,7 +405,9 @@ async function executeTool(name: string, args: any): Promise<{ summary: string; 
         try {
           const { sendApplicationApprovedEmail } = await import("./sendgrid");
           await sendApplicationApprovedEmail(app.email, app.firstName);
-        } catch {}
+        } catch (emailErr: unknown) {
+          console.error("[AI Agent] Failed to send approval email:", (emailErr as Error).message);
+        }
         return { summary: `Application ${args.application_id} approved. Email sent to ${(app as any).email}.`, data: app };
       }
 
@@ -418,7 +420,9 @@ async function executeTool(name: string, args: any): Promise<{ summary: string; 
         try {
           const { sendApplicationRejectedEmail } = await import("./sendgrid");
           await sendApplicationRejectedEmail((app as any).email, (app as any).firstName, args.reason);
-        } catch {}
+        } catch (emailErr: unknown) {
+          console.error("[AI Agent] Failed to send rejection email:", (emailErr as Error).message);
+        }
         return { summary: `Application ${args.application_id} rejected.`, data: app };
       }
 

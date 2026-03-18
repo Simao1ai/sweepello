@@ -104,7 +104,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/pricing-estimate", async (req, res) => {
+  app.get("/api/pricing-estimate", isAuthenticated, async (req, res) => {
     const { serviceType, bedrooms, bathrooms, squareFootage, basement } = req.query;
     const pricing = calculateBrokeragePrice(
       String(serviceType || "standard"),
@@ -228,13 +228,15 @@ export async function registerRoutes(
   });
 
   // === ADMIN ROUTES ===
-  app.get("/api/clients", async (_req, res) => {
+  app.get("/api/clients", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allClients = await storage.getClients();
     res.json(allClients);
   });
 
-  app.post("/api/clients", async (req, res) => {
+  app.post("/api/clients", isAuthenticated, async (req, res) => {
     try {
+      if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
       const validated = insertClientSchema.parse(req.body);
       const client = await storage.createClient(validated);
       res.json(client);
@@ -243,13 +245,15 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/cleaners", async (_req, res) => {
+  app.get("/api/cleaners", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allCleaners = await storage.getCleaners();
     res.json(allCleaners);
   });
 
-  app.post("/api/cleaners", async (req, res) => {
+  app.post("/api/cleaners", isAuthenticated, async (req, res) => {
     try {
+      if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
       const validated = insertCleanerSchema.parse(req.body);
       const cleaner = await storage.createCleaner(validated);
       res.json(cleaner);
@@ -258,13 +262,15 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", async (_req, res) => {
+  app.get("/api/jobs", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allJobs = await storage.getJobs();
     res.json(allJobs);
   });
 
-  app.post("/api/jobs", async (req, res) => {
+  app.post("/api/jobs", isAuthenticated, async (req, res) => {
     try {
+      if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
       const validated = insertJobSchema.parse(req.body);
       const job = await storage.createJob(validated);
 
@@ -293,14 +299,24 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
-      const job = await storage.updateJob(req.params.id, req.body);
+      if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+      const allowedFields = z.object({
+        status: z.enum(["pending", "broadcasting", "assigned", "in_progress", "completed", "cancelled"]).optional(),
+        scheduledDate: z.coerce.date().optional(),
+        notes: z.string().optional(),
+        specialInstructions: z.string().optional(),
+        startedAt: z.coerce.date().optional(),
+        completedAt: z.coerce.date().optional(),
+      });
+      const safeUpdate = allowedFields.parse(req.body);
+      const job = await storage.updateJob(req.params.id, safeUpdate);
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
       }
 
-      if (req.body.status === "completed" && job.cleanerId) {
+      if (safeUpdate.status === "completed" && job.cleanerId) {
         const cleaner = await storage.getCleaner(job.cleanerId);
         if (cleaner) {
           await storage.updateCleaner(cleaner.id, {
@@ -320,18 +336,21 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/payments", async (_req, res) => {
+  app.get("/api/payments", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allPayments = await storage.getPayments();
     res.json(allPayments);
   });
 
-  app.get("/api/reviews", async (_req, res) => {
+  app.get("/api/reviews", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allReviews = await storage.getReviews();
     res.json(allReviews);
   });
 
-  app.post("/api/reviews", async (req, res) => {
+  app.post("/api/reviews", isAuthenticated, async (req, res) => {
     try {
+      if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
       const validated = insertReviewSchema.parse(req.body);
       const review = await storage.createReview(validated);
       res.json(review);
@@ -428,7 +447,11 @@ export async function registerRoutes(
         return res.json(updated);
       }
 
-      const updated = await storage.updateServiceRequest(req.params.id, req.body);
+      const safeUpdate = z.object({
+        status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_progress", "completed", "cancelled"]).optional(),
+        specialInstructions: z.string().optional(),
+      }).parse(req.body);
+      const updated = await storage.updateServiceRequest(req.params.id, safeUpdate);
       res.json(updated);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
@@ -646,7 +669,8 @@ export async function registerRoutes(
   });
 
   // === DASHBOARD STATS ===
-  app.get("/api/dashboard/stats", async (_req, res) => {
+  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const [allJobs, allCleaners, allPayments] = await Promise.all([
       storage.getJobs(),
       storage.getCleaners(),
@@ -677,7 +701,8 @@ export async function registerRoutes(
   });
 
   // === CALENDAR DATA ===
-  app.get("/api/calendar", async (req, res) => {
+  app.get("/api/calendar", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const [allJobs, allCleaners] = await Promise.all([
       storage.getJobs(),
       storage.getCleaners(),
@@ -721,7 +746,8 @@ export async function registerRoutes(
 
       const existing = await storage.getContractorOnboarding(userId);
       if (existing) {
-        const updated = await storage.updateContractorOnboarding(userId, req.body);
+        const validated = insertContractorOnboardingSchema.partial().parse(req.body);
+        const updated = await storage.updateContractorOnboarding(userId, validated);
         return res.json(updated);
       }
 
@@ -955,7 +981,9 @@ export async function registerRoutes(
             detailsSubmitted: account.details_submitted ?? false,
             balance,
           };
-        } catch {}
+        } catch (stripeErr: unknown) {
+          console.error("[Stripe] Failed to fetch account/balance details:", (stripeErr as Error).message);
+        }
       }
 
       const jobs = cleaner ? await storage.getJobsByCleanerId(cleaner.id) : [];
@@ -1083,7 +1111,9 @@ export async function registerRoutes(
         if (onboarding?.email) {
           await sendApplicationApprovedEmail(onboarding.email, onboarding.fullName);
         }
-      } catch {}
+      } catch (emailErr: unknown) {
+        console.error("[SendGrid] Failed to send approval email:", (emailErr as Error).message);
+      }
       res.json({ success: true, profile: updated });
     } catch (err: unknown) {
       res.status(400).json({ message: (err as Error).message });
@@ -1104,7 +1134,9 @@ export async function registerRoutes(
         if (onboarding?.email) {
           await sendApplicationRejectedEmail(onboarding.email, onboarding.fullName, reason || "We are unable to approve your application at this time.");
         }
-      } catch {}
+      } catch (emailErr: unknown) {
+        console.error("[SendGrid] Failed to send rejection email:", (emailErr as Error).message);
+      }
       res.json({ success: true, profile: updated });
     } catch (err: unknown) {
       res.status(400).json({ message: (err as Error).message });

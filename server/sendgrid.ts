@@ -1,5 +1,14 @@
 import sgMail from '@sendgrid/mail';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 async function getCredentials() {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
@@ -30,6 +39,7 @@ export async function getUncachableSendGridClient() {
 export async function sendApplicationApprovedEmail(to: string, name: string) {
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
+    const safeName = escapeHtml(name);
     await client.send({
       to,
       from: fromEmail,
@@ -38,10 +48,10 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(90deg, #0099FF, #44CC00); padding: 28px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Sweepello</h1>
-            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">NJ Shore Cleaning Services</p>
+            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">Nationwide Cleaning Services</p>
           </div>
           <div style="padding: 32px; background: #fff;">
-            <h2 style="color: #111827;">Congratulations, ${name}!</h2>
+            <h2 style="color: #111827;">Congratulations, ${safeName}!</h2>
             <p style="color: #374151; line-height: 1.6;">
               We're thrilled to let you know that your contractor application has been <strong>approved</strong>. 
               Welcome to the Sweepello network!
@@ -63,7 +73,7 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
             </p>
           </div>
           <div style="background: #f9fafb; padding: 16px; text-align: center;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — NJ Shore Market</p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — Nationwide Cleaning Dispatch</p>
           </div>
         </div>
       `,
@@ -76,6 +86,8 @@ export async function sendApplicationApprovedEmail(to: string, name: string) {
 export async function sendApplicationRejectedEmail(to: string, name: string, note?: string) {
   try {
     const { client, fromEmail } = await getUncachableSendGridClient();
+    const safeName = escapeHtml(name);
+    const safeNote = note ? escapeHtml(note) : undefined;
     await client.send({
       to,
       from: fromEmail,
@@ -84,17 +96,17 @@ export async function sendApplicationRejectedEmail(to: string, name: string, not
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(90deg, #0099FF, #44CC00); padding: 28px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: -0.5px;">Sweepello</h1>
-            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">NJ Shore Cleaning Services</p>
+            <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 14px;">Nationwide Cleaning Services</p>
           </div>
           <div style="padding: 32px; background: #fff;">
-            <h2 style="color: #111827;">Hi ${name},</h2>
+            <h2 style="color: #111827;">Hi ${safeName},</h2>
             <p style="color: #374151; line-height: 1.6;">
               Thank you for your interest in joining the Sweepello network. After careful review, 
               we are unable to approve your contractor application at this time.
             </p>
-            ${note ? `
+            ${safeNote ? `
             <div style="background: #f9fafb; border-left: 4px solid #d1d5db; padding: 16px; margin: 16px 0;">
-              <p style="color: #374151; margin: 0; font-style: italic;">${note}</p>
+              <p style="color: #374151; margin: 0; font-style: italic;">${safeNote}</p>
             </div>
             ` : ''}
             <p style="color: #374151; line-height: 1.6;">
@@ -103,7 +115,7 @@ export async function sendApplicationRejectedEmail(to: string, name: string, not
             </p>
           </div>
           <div style="background: #f9fafb; padding: 16px; text-align: center;">
-            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — NJ Shore Market</p>
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">Sweepello — Nationwide Cleaning Dispatch</p>
           </div>
         </div>
       `,
