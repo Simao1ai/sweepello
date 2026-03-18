@@ -59,6 +59,7 @@
 		A100000050 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000050; };
 		A100000051 /* JobChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000051; };
 		A100000052 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B100000052; };
+		A100000053 /* WebAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000054; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -116,6 +117,7 @@
 		B100000051 /* JobChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobChatView.swift; sourceTree = "<group>"; };
 		B100000052 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B100000053 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B100000054 /* WebAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -218,6 +220,7 @@
 				B100000022 /* LandingView.swift */,
 				B100000023 /* LoginView.swift */,
 				B100000024 /* RoleSelectionView.swift */,
+				B100000054 /* WebAuthView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -413,6 +416,7 @@
 				A100000049 /* AdminPaymentsView.swift in Sources */,
 				A100000050 /* SharedComponents.swift in Sources */,
 				A100000051 /* JobChatView.swift in Sources */,
+				A100000053 /* WebAuthView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

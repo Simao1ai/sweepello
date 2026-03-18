@@ -4,6 +4,7 @@ import AuthenticationServices
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
+    @State private var showWebAuth = false
 
     var body: some View {
         NavigationStack {
@@ -33,15 +34,14 @@ struct LoginView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal, 40)
 
-                // Alternative: Email sign in
+                // Web-based sign in (Replit Auth)
                 VStack(spacing: 12) {
                     Text("or sign in with your Sweepello account")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    // This would open the web-based Replit Auth flow
                     Button {
-                        openWebAuth()
+                        showWebAuth = true
                     } label: {
                         HStack {
                             Image(systemName: "globe")
@@ -64,6 +64,28 @@ struct LoginView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .fullScreenCover(isPresented: $showWebAuth) {
+                NavigationStack {
+                    WebAuthView(
+                        url: URL(string: "\(Configuration.apiBaseURL)/api/login")!,
+                        onAuthenticated: {
+                            showWebAuth = false
+                            Task {
+                                await authManager.checkSession()
+                                dismiss()
+                            }
+                        }
+                    )
+                    .ignoresSafeArea()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                showWebAuth = false
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -77,10 +99,5 @@ struct LoginView: View {
         case .failure:
             break
         }
-    }
-
-    private func openWebAuth() {
-        guard let url = URL(string: "\(Configuration.apiBaseURL)/api/login") else { return }
-        UIApplication.shared.open(url)
     }
 }

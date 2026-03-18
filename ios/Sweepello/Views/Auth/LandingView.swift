@@ -36,11 +36,19 @@ struct LandingView: View {
     private var heroSection: some View {
         ZStack {
             LinearGradient(
-                colors: [Color.sweepelloPrimary, Color.sweepelloSecondary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [Color(red: 0.08, green: 0.08, blue: 0.12), Color(red: 0.1, green: 0.12, blue: 0.16)],
+                startPoint: .top,
+                endPoint: .bottom
             )
             .frame(height: 420)
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [Color.sweepelloPrimary, Color.sweepelloSecondary, Color.sweepelloAccent],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(height: 3)
+            }
 
             VStack(spacing: 20) {
                 Spacer()

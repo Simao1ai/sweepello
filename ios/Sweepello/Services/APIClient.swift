@@ -40,6 +40,7 @@ actor APIClient {
         config.timeoutIntervalForRequest = Configuration.requestTimeout
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true
+        config.httpCookieStorage = HTTPCookieStorage.shared
 
         self.session = URLSession(configuration: config)
         self.baseURL = Configuration.apiBaseURL
