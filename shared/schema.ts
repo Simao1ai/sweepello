@@ -261,7 +261,9 @@ export const insertCleanerSchema = createInsertSchema(cleaners).omit({ id: true,
 export const insertJobSchema = createInsertSchema(jobs).omit({ id: true, profit: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true, moderationStatus: true, adminNote: true, adminModifiedAt: true });
-export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true, subcontractorCost: true });
+export const insertServiceRequestSchema = createInsertSchema(serviceRequests, {
+  requestedDate: z.coerce.date(),
+}).omit({ id: true, createdAt: true, jobId: true, assignedCleanerId: true, estimatedPrice: true, subcontractorCost: true });
 export const insertCleanerAvailabilitySchema = createInsertSchema(cleanerAvailability).omit({ id: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
 export const insertJobOfferSchema = createInsertSchema(jobOffers).omit({ id: true, offeredAt: true, respondedAt: true });
