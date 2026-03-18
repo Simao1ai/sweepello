@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Quote } from "lucide-react";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -284,26 +284,9 @@ export default function ContractorJobs() {
                         </div>
 
                         {clientReview ? (
-                          <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 space-y-1" data-testid={`review-received-${job.id}`}>
-                            <div className="flex items-center gap-2">
-                              <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(i => (
-                                  <Star key={i} className={`h-3.5 w-3.5 ${i <= clientReview.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
-                                ))}
-                              </div>
-                              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                                Client rated you {clientReview.rating}/5
-                              </span>
-                            </div>
-                            {clientReview.comment && (
-                              <div className="flex items-start gap-1.5">
-                                <Quote className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                                <p className="text-xs text-muted-foreground italic" data-testid={`text-review-comment-${job.id}`}>
-                                  {clientReview.comment}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                          <p className="text-xs text-green-600 dark:text-green-400 font-medium" data-testid={`review-received-${job.id}`}>
+                            ✓ Client review received
+                          </p>
                         ) : (
                           <p className="text-xs text-muted-foreground/60 italic" data-testid={`text-no-review-${job.id}`}>
                             No client review yet

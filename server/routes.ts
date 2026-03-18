@@ -143,6 +143,12 @@ export async function registerRoutes(
     res.json(requests);
   });
 
+  app.get("/api/reviews/mine", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const reviews = await storage.getReviewsByUserId(userId);
+    res.json(reviews);
+  });
+
   app.get("/api/service-requests/:id", isAuthenticated, async (req, res) => {
     const request = await storage.getServiceRequest(req.params.id);
     if (!request) return res.status(404).json({ message: "Not found" });
@@ -191,10 +197,8 @@ export async function registerRoutes(
         if (cleaner?.userId) {
           await storage.createNotification({
             userId: cleaner.userId,
-            title: `New review: ${stars} ${ratingLabel}`,
-            message: review.comment
-              ? `A client rated your service ${review.rating}/5 stars: "${review.comment}"`
-              : `A client rated your service ${review.rating}/5 stars for ${job.propertyAddress}.`,
+            title: `New rating: ${stars} (${review.rating}/5)`,
+            message: `A client rated your recent cleaning ${review.rating} out of 5 stars. Keep up the great work!`,
             type: "review_received",
             jobId: job.id,
           });
@@ -357,6 +361,17 @@ export async function registerRoutes(
 
         if (job.serviceRequestId) {
           await storage.updateServiceRequest(job.serviceRequestId, { status: "completed" });
+          const sr = await storage.getServiceRequest(job.serviceRequestId);
+          if (sr?.userId) {
+            await storage.createNotification({
+              userId: sr.userId,
+              title: "How was your cleaning?",
+              message: `Your cleaning at ${job.propertyAddress} is complete. Tap to rate your experience — it only takes a moment.`,
+              type: "rate_prompt",
+              jobId: job.id,
+              serviceRequestId: job.serviceRequestId,
+            });
+          }
         }
       }
 
@@ -631,6 +646,17 @@ export async function registerRoutes(
         });
         if (job.serviceRequestId) {
           await storage.updateServiceRequest(job.serviceRequestId, { status: "completed" });
+          const sr = await storage.getServiceRequest(job.serviceRequestId);
+          if (sr?.userId) {
+            await storage.createNotification({
+              userId: sr.userId,
+              title: "How was your cleaning?",
+              message: `Your cleaning at ${job.propertyAddress} is complete. Tap to rate your experience — it only takes a moment.`,
+              type: "rate_prompt",
+              jobId: job.id,
+              serviceRequestId: job.serviceRequestId,
+            });
+          }
         }
       }
 
