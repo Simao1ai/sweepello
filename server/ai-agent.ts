@@ -42,7 +42,7 @@ async function getLiveSnapshot(): Promise<string> {
   }
 }
 
-const SYSTEM_PROMPT = `You are Sweepo, the autonomous AI operations manager for Sweepello — a cleaning brokerage in the NJ Shore market.
+const SYSTEM_PROMPT = `You are Sweepo, the autonomous AI operations manager for Sweepello — a nationwide cleaning brokerage platform.
 
 You can fully manage the admin account. You have tools to read data AND perform real actions:
 - List and inspect jobs, service requests, cleaners, clients, applications, disputes
@@ -501,6 +501,8 @@ export function registerAiAgentRoutes(app: Express) {
       }
 
       const snapshot = await getLiveSnapshot();
+      const adminUserId = req.user?.claims?.sub;
+      const firstUserMsg = chatMessages.find((m: any) => m.role === "user")?.content?.slice(0, 200);
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -514,6 +516,10 @@ export function registerAiAgentRoutes(app: Express) {
         })),
       ];
 
+      // Accumulate token usage across all rounds
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
+
       // Tool-calling loop (max 5 rounds)
       let rounds = 0;
       while (rounds < 5) {
@@ -525,6 +531,12 @@ export function registerAiAgentRoutes(app: Express) {
           tool_choice: "auto",
           max_tokens: 2048,
         });
+
+        // Accumulate token counts
+        if (response.usage) {
+          totalPromptTokens += response.usage.prompt_tokens;
+          totalCompletionTokens += response.usage.completion_tokens;
+        }
 
         const choice = response.choices[0];
 
@@ -558,17 +570,8 @@ export function registerAiAgentRoutes(app: Express) {
           continue;
         }
 
-        // Final text response — stream it
+        // Final text response — stream word by word (no extra API call)
         if (choice.message.content) {
-          const textStream = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [...openaiMessages, { role: "assistant", content: choice.message.content }],
-            stream: true,
-            max_tokens: 1024,
-          });
-
-          // Just stream the stored content word by word for a better UX
-          // Actually stream the last response
           const words = choice.message.content.split(" ");
           for (let i = 0; i < words.length; i++) {
             const chunk = (i === 0 ? "" : " ") + words[i];
@@ -579,7 +582,23 @@ export function registerAiAgentRoutes(app: Express) {
         break;
       }
 
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      // Calculate cost: GPT-4o = $5/1M input, $15/1M output
+      const totalTokens = totalPromptTokens + totalCompletionTokens;
+      const costUsd = ((totalPromptTokens * 0.000005) + (totalCompletionTokens * 0.000015)).toFixed(8);
+
+      // Save usage log (fire and forget)
+      storage.createAiUsageLog({
+        adminUserId,
+        model: "gpt-4o",
+        promptTokens: totalPromptTokens,
+        completionTokens: totalCompletionTokens,
+        totalTokens,
+        costUsd,
+        rounds,
+        userMessage: firstUserMsg,
+      }).catch(err => console.error("[AI Agent] Failed to save usage log:", err));
+
+      res.write(`data: ${JSON.stringify({ done: true, usage: { promptTokens: totalPromptTokens, completionTokens: totalCompletionTokens, totalTokens, costUsd } })}\n\n`);
       res.end();
     } catch (err: any) {
       console.error("[AI Agent] Error:", err);

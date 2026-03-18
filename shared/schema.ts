@@ -239,6 +239,21 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  createdAt: timestamp("created_at").defaultNow(),
+  adminUserId: varchar("admin_user_id"),
+  model: text("model").notNull().default("gpt-4o"),
+  promptTokens: integer("prompt_tokens").notNull().default(0),
+  completionTokens: integer("completion_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  costUsd: decimal("cost_usd", { precision: 10, scale: 8 }).notNull().default("0"),
+  rounds: integer("rounds").notNull().default(1),
+  userMessage: text("user_message"),
+});
+
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+
 export const insertContractorOnboardingSchema = createInsertSchema(contractorOnboarding).omit({ id: true, createdAt: true, updatedAt: true, stripeAccountId: true, stripeOnboardingComplete: true, onboardingStatus: true, agreementSigned: true, agreementSignedAt: true, agreementSignatureName: true, agreementDeclined: true });
 export type ContractorOnboarding = typeof contractorOnboarding.$inferSelect;
 export type InsertContractorOnboarding = z.infer<typeof insertContractorOnboardingSchema>;

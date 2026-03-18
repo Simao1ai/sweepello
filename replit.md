@@ -47,6 +47,7 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **contractorOnboarding** - Multi-step contractor onboarding (userId, business info, W-9 signature, insurance, Stripe Connect accountId, onboardingStatus)
 - **contractorApplications** - Public contractor applications (pre-account); status: pending/approved/rejected/waitlisted; admin reviews and triggers approval/rejection emails
 - **disputes** - Dispute resolution records (open/investigating/resolved); admin managed with notes and resolution tracking
+- **aiUsageLogs** - GPT-4o token usage per Sweepo conversation (adminUserId, model, promptTokens, completionTokens, totalTokens, costUsd, rounds, userMessage)
 - **clients** now has isActive, isVip, adminNote fields for admin management
 - **cleaners** now has statusNote, isFeatured, adminNote fields for admin management
 - **reviews** now has moderationStatus (approved/hidden/pending), adminNote, adminModifiedAt for admin moderation
@@ -60,9 +61,10 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - Location-based cleaner matching by zip code
 
 ### Admin Portal
-- **Sweepo AI Agent**: autonomous operations manager (bottom-right, indigo FAB); powered by gpt-4o with 15 admin tools via function calling; can read and act on all data; shows action cards per tool call; quick-prompt chips; streaming text; cache-busts React Query on write actions
+- **Sweepo AI Agent**: autonomous operations manager (bottom-right, indigo FAB); powered by gpt-4o with 15 admin tools via function calling; can read and act on all data; shows action cards per tool call; quick-prompt chips; streaming text; cache-busts React Query on write actions; token usage logged to DB per conversation
   - Read tools: list_service_requests, list_jobs, list_cleaners, list_clients, list_applications, list_disputes, get_job_details, get_dashboard_stats
   - Write tools: broadcast_job_offers, assign_cleaner_to_request, update_job_status, approve_application, reject_application, resolve_dispute, send_notification
+- **AI Usage Dashboard** (`/admin/ai-usage`): tracks GPT-4o token usage per Sweepo conversation; shows today/month/all-time cost, total tokens, daily bar chart (last 30 days), and per-conversation log with token breakdown; pricing: $5/1M input, $15/1M output
 - Dashboard with KPI stats (revenue, margin, jobs, ratings)
 - Scheduling calendar with job events, pending requests, and broadcasting status
 - Uber-style job broadcast: auto-notify available cleaners sorted by rating, or manual assignment

@@ -39,6 +39,7 @@ import Applications from "@/pages/admin/applications";
 import ReviewModeration from "@/pages/admin/review-moderation";
 import Disputes from "@/pages/admin/disputes";
 import Broadcast from "@/pages/admin/broadcast";
+import AiUsage from "@/pages/admin/ai-usage";
 import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } from "@shared/schema";
 
 function AuthenticatedApp() {
@@ -107,6 +108,7 @@ function AdminApp({ user }: { user: any }) {
               <Route path="/admin/reviews" component={ReviewModeration} />
               <Route path="/admin/disputes" component={Disputes} />
               <Route path="/admin/broadcast" component={Broadcast} />
+              <Route path="/admin/ai-usage" component={AiUsage} />
               <Route component={NotFound} />
             </Switch>
           </main>

@@ -1422,6 +1422,31 @@ export async function registerRoutes(
     }
   });
 
+  // === AI USAGE STATS ===
+  app.get("/api/admin/ai-usage/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const stats = await storage.getAiUsageStats();
+      res.json(stats);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  app.get("/api/admin/ai-usage/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
+      const logs = await storage.getAiUsageLogs(50);
+      res.json(logs);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
   // === SURGE PRICING ===
   app.get("/api/surge", async (req, res) => {
     try {

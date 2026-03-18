@@ -22,6 +22,7 @@ import {
   Star,
   AlertTriangle,
   Send,
+  Bot,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -54,6 +55,7 @@ const adminNavItems = [
   { title: "Reviews", url: "/admin/reviews", icon: Star },
   { title: "Disputes", url: "/admin/disputes", icon: AlertTriangle },
   { title: "Broadcast", url: "/admin/broadcast", icon: Send },
+  { title: "AI Usage", url: "/admin/ai-usage", icon: Bot },
 ];
 
 const clientNavItems = [

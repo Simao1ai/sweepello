@@ -1,7 +1,7 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, gte, sql as drizzleSql } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages, aiUsageLogs,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -16,6 +16,7 @@ import {
   type ContractorApplication, type InsertContractorApplication,
   type Dispute, type InsertDispute,
   type Message, type InsertMessage,
+  type AiUsageLog,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -408,6 +409,80 @@ export class DatabaseStorage implements IStorage {
 
   async getCleanerByUserIdForUpdate(userId: string): Promise<Cleaner | undefined> {
     return this.getCleanerByUserId(userId);
+  }
+
+  async createAiUsageLog(data: {
+    adminUserId?: string;
+    model: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    costUsd: string;
+    rounds: number;
+    userMessage?: string;
+  }): Promise<AiUsageLog> {
+    const [log] = await db.insert(aiUsageLogs).values(data).returning();
+    return log;
+  }
+
+  async getAiUsageLogs(limit = 100): Promise<AiUsageLog[]> {
+    return db.select().from(aiUsageLogs).orderBy(desc(aiUsageLogs.createdAt)).limit(limit);
+  }
+
+  async getAiUsageStats(): Promise<{
+    todayCost: number;
+    monthCost: number;
+    allTimeCost: number;
+    totalConversations: number;
+    totalTokens: number;
+    dailyUsage: { date: string; cost: number; tokens: number; conversations: number }[];
+  }> {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const all = await db.select().from(aiUsageLogs).orderBy(desc(aiUsageLogs.createdAt));
+
+    const todayCost = all
+      .filter(l => new Date(l.createdAt!) >= todayStart)
+      .reduce((s, l) => s + parseFloat(l.costUsd || "0"), 0);
+
+    const monthCost = all
+      .filter(l => new Date(l.createdAt!) >= monthStart)
+      .reduce((s, l) => s + parseFloat(l.costUsd || "0"), 0);
+
+    const allTimeCost = all.reduce((s, l) => s + parseFloat(l.costUsd || "0"), 0);
+    const totalTokens = all.reduce((s, l) => s + (l.totalTokens || 0), 0);
+
+    // Build daily buckets for last 30 days
+    const dailyMap: Record<string, { cost: number; tokens: number; conversations: number }> = {};
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().split("T")[0];
+      dailyMap[key] = { cost: 0, tokens: 0, conversations: 0 };
+    }
+    for (const log of all) {
+      const key = new Date(log.createdAt!).toISOString().split("T")[0];
+      if (dailyMap[key]) {
+        dailyMap[key].cost += parseFloat(log.costUsd || "0");
+        dailyMap[key].tokens += log.totalTokens || 0;
+        dailyMap[key].conversations += 1;
+      }
+    }
+
+    const dailyUsage = Object.entries(dailyMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, ...v }));
+
+    return {
+      todayCost,
+      monthCost,
+      allTimeCost,
+      totalConversations: all.length,
+      totalTokens,
+      dailyUsage,
+    };
   }
 }
 
