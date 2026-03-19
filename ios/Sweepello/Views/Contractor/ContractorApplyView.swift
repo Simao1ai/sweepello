@@ -143,11 +143,11 @@ struct ContractorApplyView: View {
                             .frame(width: 36, height: 36)
                         Image(systemName: steps[index].icon)
                             .font(.system(size: 14))
-                            .foregroundStyle(index <= currentStep ? Color.sweepelloPrimary : .secondary.opacity(0.5))
+                            .foregroundStyle(index <= currentStep ? Color.sweepelloPrimary : Color.secondary.opacity(0.5))
                     }
                     Text(steps[index].title)
                         .font(.system(size: 9))
-                        .foregroundStyle(index <= currentStep ? .primary : .secondary.opacity(0.5))
+                        .foregroundStyle(index <= currentStep ? Color.primary : Color.secondary.opacity(0.5))
                 }
                 .frame(maxWidth: .infinity)
 
