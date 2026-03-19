@@ -68,6 +68,22 @@ export async function registerRoutes(
       const approvalStatus = chosenRole === "contractor" ? "pending" : "approved";
       const validated = insertUserProfileSchema.parse({ ...rest, userId, role: chosenRole, approvalStatus });
       const profile = await storage.createUserProfile(validated);
+
+      if (chosenRole === "contractor") {
+        const allProfiles = await storage.getAllUserProfiles();
+        const adminProfiles = allProfiles.filter(p => p.role === "admin");
+        const claims = (req as any).user?.claims || {};
+        const displayName = claims.name || claims.email || "A new contractor";
+        await Promise.all(adminProfiles.map(p =>
+          storage.createNotification({
+            userId: p.userId,
+            title: "New contractor account pending approval",
+            message: `${displayName} has signed up as a contractor and is waiting for your approval. Review them in Applications.`,
+            type: "contractor_pending",
+          })
+        ));
+      }
+
       res.json(profile);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
