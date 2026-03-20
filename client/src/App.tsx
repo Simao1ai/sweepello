@@ -41,7 +41,23 @@ import ReviewModeration from "@/pages/admin/review-moderation";
 import Disputes from "@/pages/admin/disputes";
 import Broadcast from "@/pages/admin/broadcast";
 import AiUsage from "@/pages/admin/ai-usage";
+import DevLogin from "@/pages/dev-login";
 import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } from "@shared/schema";
+
+function DevSwitcher() {
+  const [, navigate] = useLocation();
+  if (!import.meta.env.DEV) return null;
+  return (
+    <button
+      onClick={() => navigate("/dev-login")}
+      data-testid="button-dev-switcher"
+      className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-500/20 transition-colors"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+      Dev
+    </button>
+  );
+}
 
 function AuthenticatedApp() {
   const { user } = useAuth();
@@ -91,7 +107,7 @@ function AdminApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
@@ -130,7 +146,7 @@ function ClientApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
@@ -179,7 +195,7 @@ function ContractorApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
@@ -229,6 +245,10 @@ function AppContent() {
 
   if (location === "/apply") {
     return <ContractorApply />;
+  }
+
+  if (location === "/dev-login") {
+    return <DevLogin />;
   }
 
   if (isLoading) {

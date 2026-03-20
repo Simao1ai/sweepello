@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { isAuthenticated } from "./replit_integrations/auth";
+import { isAuthenticated, authStorage } from "./replit_integrations/auth";
 import {
   insertClientSchema, insertCleanerSchema, insertJobSchema,
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
@@ -45,6 +45,57 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // === DEV-ONLY LOGIN SWITCHER (never available in production) ===
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/dev/users", async (_req, res) => {
+      const allProfiles = await storage.getAllUserProfiles();
+      const users = await Promise.all(
+        allProfiles.map(async (p) => {
+          const user = await authStorage.getUser(p.userId);
+          return {
+            id: p.userId,
+            name: [user?.firstName, user?.lastName].filter(Boolean).join(" ") || p.userId,
+            email: user?.email || "",
+            role: p.role,
+            approvalStatus: p.approvalStatus,
+          };
+        })
+      );
+      res.json(users);
+    });
+
+    app.post("/api/dev/login", async (req, res) => {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ message: "userId required" });
+      const user = await authStorage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const fakeUser = {
+        claims: {
+          sub: user.id,
+          email: user.email || "",
+          first_name: user.firstName || "",
+          last_name: user.lastName || "",
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+        },
+        access_token: "dev-token",
+        refresh_token: null,
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+      };
+      req.login(fakeUser, (err) => {
+        if (err) return res.status(500).json({ message: "Login failed", error: String(err) });
+        res.json({ ok: true, userId: user.id, role: "switching..." });
+      });
+    });
+
+    app.post("/api/dev/logout", (req, res) => {
+      req.logout(() => {
+        req.session.destroy(() => {
+          res.json({ ok: true });
+        });
+      });
+    });
+  }
 
   // === USER PROFILE ROUTES ===
   app.get("/api/profile", isAuthenticated, async (req, res) => {
