@@ -43,6 +43,7 @@ import Disputes from "@/pages/admin/disputes";
 import Broadcast from "@/pages/admin/broadcast";
 import AiUsage from "@/pages/admin/ai-usage";
 import DevLogin from "@/pages/dev-login";
+import ClientAccount from "@/pages/client-account";
 import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } from "@shared/schema";
 
 function DevSwitcher() {
@@ -122,7 +123,7 @@ function AdminApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
+            <div className="flex items-center gap-2"><DevSwitcher /><NotificationBell /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
@@ -173,6 +174,7 @@ function ClientApp({ user }: { user: any }) {
               <Route path="/request-service" component={RequestService} />
               <Route path="/rate/:id" component={RateService} />
               <Route path="/tracking/:id" component={Tracking} />
+              <Route path="/account" component={ClientAccount} />
               <Route component={NotFound} />
             </Switch>
           </main>

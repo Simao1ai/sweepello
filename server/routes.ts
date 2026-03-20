@@ -111,6 +111,17 @@ export async function registerRoutes(
       if (existing) {
         const { role: _ignoredRole, approvalStatus: _ignored2, ...safeBody } = req.body;
         const updated = await storage.updateUserProfile(userId, safeBody);
+        // Sync address/phone changes back to clients table if this is a client
+        if (existing.role === "client") {
+          const clientRecord = await storage.getClientByUserId(userId);
+          if (clientRecord) {
+            const patch: Record<string, any> = {};
+            if (safeBody.address !== undefined) patch.propertyAddress = safeBody.address;
+            if (safeBody.city !== undefined) patch.city = safeBody.city;
+            if (safeBody.zipCode !== undefined) patch.zipCode = safeBody.zipCode;
+            if (Object.keys(patch).length > 0) await storage.updateClient(clientRecord.id, patch);
+          }
+        }
         return res.json(updated);
       }
       const allowedRoles = ["client", "contractor"];
@@ -1405,7 +1416,18 @@ export async function registerRoutes(
     const profile = await storage.getUserProfile(userId);
     if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
     const allReviews = await storage.getReviews();
-    res.json(allReviews);
+    const [allClients, allCleaners, allJobs] = await Promise.all([
+      storage.getClients(),
+      storage.getCleaners(),
+      storage.getJobs(),
+    ]);
+    const enriched = allReviews.map(r => ({
+      ...r,
+      clientName: allClients.find(c => c.id === r.clientId)?.name || null,
+      cleanerName: allCleaners.find(c => c.id === r.cleanerId)?.name || null,
+      jobAddress: allJobs.find(j => j.id === r.jobId)?.propertyAddress || null,
+    }));
+    res.json(enriched);
   });
 
   app.patch("/api/admin/reviews/:id", isAuthenticated, async (req, res) => {

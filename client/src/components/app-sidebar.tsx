@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Send,
   Bot,
+  UserCog,
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ const clientNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "My Bookings", url: "/my-bookings", icon: ClipboardList },
   { title: "Request Service", url: "/request-service", icon: CalendarPlus },
+  { title: "My Account", url: "/account", icon: UserCog },
 ];
 
 const contractorNavItems = [

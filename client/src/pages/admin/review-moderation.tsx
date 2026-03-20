@@ -81,7 +81,13 @@ export default function ReviewModeration() {
                 <Badge className={STATUS_COLORS[status]}>{status}</Badge>
                 {review.rating <= 2 && <Badge variant="outline" className="text-red-600 border-red-300 text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Low Rating</Badge>}
               </div>
-              <p className="text-sm text-muted-foreground">Job #{review.jobId?.slice(0, 8)} · Client #{review.clientId?.slice(0, 8)} · Cleaner #{review.cleanerId?.slice(0, 8)}</p>
+              <p className="text-sm text-muted-foreground">
+                {(review as any).jobAddress ? `📍 ${(review as any).jobAddress}` : `Job #${review.jobId?.slice(0, 8)}`}
+                {" · "}
+                <span>Client: {(review as any).clientName || `#${review.clientId?.slice(0, 8)}`}</span>
+                {" · "}
+                <span>Cleaner: {(review as any).cleanerName || `#${review.cleanerId?.slice(0, 8)}`}</span>
+              </p>
               {review.comment && <p className="text-sm mt-1" data-testid={`text-review-comment-${review.id}`}>"{review.comment}"</p>}
               {review.adminNote && (
                 <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground">
