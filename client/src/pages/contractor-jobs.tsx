@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle } from "lucide-react";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Navigation } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocket, sendWsMessage } from "@/hooks/use-websocket";
 import JobChat from "@/components/job-chat";
 import type { Job, Review } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   assigned: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  in_route: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
   in_progress: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   completed: "bg-green-500/10 text-green-700 dark:text-green-400",
   cancelled: "bg-red-500/10 text-red-700 dark:text-red-400",
@@ -31,7 +32,8 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "Pending",
   assigned: "Assigned",
-  in_progress: "In Progress",
+  in_route: "En Route",
+  in_progress: "Cleaning",
   completed: "Completed",
   cancelled: "Cancelled",
 };
@@ -67,6 +69,31 @@ export default function ContractorJobs() {
   const [clientRatingNote, setClientRatingNote] = useState("");
   const [activeChatJobId, setActiveChatJobId] = useState<string | null>(null);
 
+  const gpsWatchRef = useRef<number | null>(null);
+  const [trackingJobId, setTrackingJobId] = useState<string | null>(null);
+
+  const startGPS = useCallback((jobId: string) => {
+    if (!navigator.geolocation) return;
+    setTrackingJobId(jobId);
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        sendWsMessage({ type: "location_update", lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
+    );
+  }, []);
+
+  const stopGPS = useCallback(() => {
+    if (gpsWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+      gpsWatchRef.current = null;
+    }
+    setTrackingJobId(null);
+  }, []);
+
+  useEffect(() => () => stopGPS(), [stopGPS]);
+
   const { data: jobs, isLoading } = useQuery<Job[]>({
     queryKey: ["/api/contractor/jobs"],
   });
@@ -99,8 +126,14 @@ export default function ContractorJobs() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
-      toast({ title: "Job status updated" });
-      if (vars.status === "completed") {
+      if (vars.status === "in_route") {
+        startGPS(vars.jobId);
+        toast({ title: "En route!", description: "GPS is now sharing your location with the client." });
+      } else if (vars.status === "in_progress") {
+        toast({ title: "Cleaning started" });
+      } else if (vars.status === "completed") {
+        stopGPS();
+        toast({ title: "Job completed" });
         const job = jobs?.find(j => j.id === vars.jobId);
         if (job) {
           setClientRating(5);
@@ -197,17 +230,36 @@ export default function ContractorJobs() {
                             <p className="text-xs text-muted-foreground mt-1">Note: {job.notes}</p>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
                           {job.status === "assigned" && (
                             <Button
                               size="sm"
-                              className="gap-1"
-                              onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: "in_progress" })}
+                              className="gap-1 bg-cyan-600 hover:bg-cyan-700 text-white"
+                              onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: "in_route" })}
                               disabled={updateStatusMutation.isPending}
-                              data-testid={`button-start-${job.id}`}
+                              data-testid={`button-en-route-${job.id}`}
                             >
-                              <PlayCircle className="h-3.5 w-3.5" /> Start
+                              <Navigation className="h-3.5 w-3.5" /> In Route
                             </Button>
+                          )}
+                          {job.status === "in_route" && (
+                            <>
+                              {trackingJobId === job.id && (
+                                <span className="flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400">
+                                  <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse inline-block" />
+                                  GPS live
+                                </span>
+                              )}
+                              <Button
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => updateStatusMutation.mutate({ jobId: job.id, status: "in_progress" })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-start-${job.id}`}
+                              >
+                                <PlayCircle className="h-3.5 w-3.5" /> Start Cleaning
+                              </Button>
+                            </>
                           )}
                           {job.status === "in_progress" && (
                             <Button

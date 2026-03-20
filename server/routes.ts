@@ -165,6 +165,38 @@ export async function registerRoutes(
     res.json(reviews);
   });
 
+  app.get("/api/service-requests/:id/tracking", isAuthenticated, async (req, res) => {
+    const userId = getUserId(req);
+    const sr = await storage.getServiceRequest(req.params.id);
+    if (!sr) return res.status(404).json({ message: "Not found" });
+    if (sr.userId !== userId) return res.status(403).json({ message: "Forbidden" });
+    if (!sr.jobId) return res.json({ jobStatus: sr.status, propertyAddress: sr.propertyAddress, scheduledDate: sr.requestedDate });
+
+    const job = await storage.getJob(sr.jobId);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    let cleanerInfo: Record<string, any> = {};
+    if (job.cleanerId) {
+      const cleaner = await storage.getCleaner(job.cleanerId);
+      if (cleaner) {
+        cleanerInfo = {
+          cleanerName: cleaner.name,
+          cleanerId: cleaner.id,
+          cleanerLat: cleaner.currentLat ? Number(cleaner.currentLat) : null,
+          cleanerLng: cleaner.currentLng ? Number(cleaner.currentLng) : null,
+        };
+      }
+    }
+
+    res.json({
+      jobStatus: job.status,
+      jobId: job.id,
+      propertyAddress: job.propertyAddress,
+      scheduledDate: job.scheduledDate,
+      ...cleanerInfo,
+    });
+  });
+
   app.get("/api/service-requests/:id", isAuthenticated, async (req, res) => {
     const request = await storage.getServiceRequest(req.params.id);
     if (!request) return res.status(404).json({ message: "Not found" });
@@ -649,11 +681,27 @@ export async function registerRoutes(
       if (job.cleanerId !== cleaner.id) return res.status(403).json({ message: "Not your job" });
 
       const { status } = req.body;
-      if (!["in_progress", "completed"].includes(status)) {
+      if (!["in_route", "in_progress", "completed"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
 
       const updated = await storage.updateJob(job.id, { status });
+
+      if (status === "in_route" && job.serviceRequestId) {
+        const sr = await storage.getServiceRequest(job.serviceRequestId);
+        if (sr?.userId) {
+          await storage.createNotification({
+            userId: sr.userId,
+            title: "Your cleaner is on the way! 🚗",
+            message: `Your cleaner is heading to ${job.propertyAddress}. Open your app to track them live.`,
+            type: "cleaner_in_route",
+            jobId: job.id,
+            serviceRequestId: job.serviceRequestId,
+          });
+          sendToUser(sr.userId, { type: "job_status_update", jobId: job.id, status: "in_route", serviceRequestId: job.serviceRequestId });
+        }
+        await storage.updateServiceRequest(job.serviceRequestId, { status: "in_route" });
+      }
 
       if (status === "completed") {
         await storage.updateCleaner(cleaner.id, {

@@ -28,6 +28,7 @@ import Schedule from "@/pages/schedule";
 import RequestService from "@/pages/request-service";
 import MyBookings from "@/pages/my-bookings";
 import RateService from "@/pages/rate-service";
+import Tracking from "@/pages/tracking";
 import ContractorJobs from "@/pages/contractor-jobs";
 import ContractorAvailability from "@/pages/contractor-availability";
 import ContractorNotifications from "@/pages/contractor-notifications";
@@ -140,6 +141,7 @@ function ClientApp({ user }: { user: any }) {
               <Route path="/my-bookings" component={MyBookings} />
               <Route path="/request-service" component={RequestService} />
               <Route path="/rate/:id" component={RateService} />
+              <Route path="/tracking/:id" component={Tracking} />
               <Route component={NotFound} />
             </Switch>
           </main>

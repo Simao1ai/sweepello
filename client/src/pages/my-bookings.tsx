@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, Clock, Plus, Star } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, Star, Navigation } from "lucide-react";
 import type { ServiceRequest, Review } from "@shared/schema";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
   broadcasting: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
   confirmed: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  in_route: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
   in_progress: "bg-purple-500/10 text-purple-700 dark:text-purple-400",
   completed: "bg-green-500/10 text-green-700 dark:text-green-400",
   cancelled: "bg-red-500/10 text-red-700 dark:text-red-400",
@@ -20,6 +21,7 @@ const statusLabels: Record<string, string> = {
   pending: "Finding Cleaners",
   broadcasting: "Matching in Progress",
   confirmed: "Cleaner Assigned",
+  in_route: "Cleaner On The Way 🚗",
   in_progress: "Cleaning in Progress",
   completed: "Completed",
   cancelled: "Cancelled",
@@ -150,7 +152,17 @@ export default function MyBookings() {
                         </span>
                       </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                      {(booking.status === "in_route" || booking.status === "in_progress") && (
+                        <Button
+                          size="sm"
+                          className="gap-1 bg-cyan-600 hover:bg-cyan-700 text-white"
+                          onClick={() => navigate(`/tracking/${booking.id}`)}
+                          data-testid={`button-track-${booking.id}`}
+                        >
+                          <Navigation className="h-3.5 w-3.5" /> Track
+                        </Button>
+                      )}
                       {booking.status === "completed" && booking.jobId && !review && (
                         <Button
                           size="sm"
