@@ -143,6 +143,35 @@ export function log(message: string, source = "express") {
   });
 
   await setupAuth(app);
+
+  // Dev-only: X-Dev-User-Id header overrides authentication
+  if (process.env.NODE_ENV !== "production") {
+    app.use(async (req: any, _res, next) => {
+      const devUserId = req.headers["x-dev-user-id"] as string | undefined;
+      if (devUserId) {
+        const { authStorage } = await import("./replit_integrations/auth");
+        const user = await authStorage.getUser(devUserId);
+        if (user) {
+          const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+          req.user = {
+            claims: {
+              sub: user.id,
+              email: user.email || "",
+              first_name: user.firstName || "",
+              last_name: user.lastName || "",
+              exp,
+            },
+            access_token: "dev-token",
+            refresh_token: null,
+            expires_at: exp,
+          };
+          req.isAuthenticated = () => true;
+        }
+      }
+      next();
+    });
+  }
+
   registerAuthRoutes(app);
   registerAiAgentRoutes(app);
   setupWebSocket(httpServer);

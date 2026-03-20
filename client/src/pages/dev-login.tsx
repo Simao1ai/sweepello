@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, LogOut, User, Shield, Wrench } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { Loader2, LogOut, User, Shield, Wrench, CheckCircle2 } from "lucide-react";
+import { DEV_USER_KEY, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface DevUser {
@@ -30,32 +30,37 @@ const roleIcons: Record<string, any> = {
 export default function DevLogin() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [switching, setSwitching] = useState<string | null>(null);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveUserId(localStorage.getItem(DEV_USER_KEY));
+  }, []);
 
   const { data: users, isLoading } = useQuery<DevUser[]>({
     queryKey: ["/api/dev/users"],
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/dev/logout"),
-    onSuccess: () => {
-      queryClient.clear();
-      toast({ title: "Logged out" });
+    queryFn: async () => {
+      const res = await fetch("/api/dev/users");
+      if (!res.ok) throw new Error("Failed to load users");
+      return res.json();
     },
   });
 
-  const loginAs = async (userId: string) => {
-    setSwitching(userId);
-    try {
-      await apiRequest("POST", "/api/dev/login", { userId });
-      queryClient.clear();
-      navigate("/");
-      window.location.reload();
-    } catch (e: any) {
-      toast({ title: "Login failed", description: e.message, variant: "destructive" });
-      setSwitching(null);
-    }
+  const loginAs = (userId: string, name: string) => {
+    localStorage.setItem(DEV_USER_KEY, userId);
+    setActiveUserId(userId);
+    queryClient.clear();
+    toast({ title: `Switched to ${name}` });
+    navigate("/");
+    window.location.reload();
+  };
+
+  const logout = () => {
+    localStorage.removeItem(DEV_USER_KEY);
+    setActiveUserId(null);
+    queryClient.clear();
+    toast({ title: "Dev session cleared — using Replit Auth" });
+    navigate("/");
+    window.location.reload();
   };
 
   const grouped = (users || []).reduce<Record<string, DevUser[]>>((acc, u) => {
@@ -64,6 +69,7 @@ export default function DevLogin() {
   }, {});
 
   const roleOrder = ["admin", "client", "contractor"];
+  const activeUser = users?.find(u => u.id === activeUserId);
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
@@ -79,18 +85,24 @@ export default function DevLogin() {
 
         <div className="bg-background border rounded-xl shadow-sm overflow-hidden">
           <div className="p-3 border-b flex justify-between items-center bg-muted/30">
-            <span className="text-xs text-muted-foreground">Current session</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-              data-testid="button-dev-logout"
-            >
-              {logoutMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-              Log Out
-            </Button>
+            <div className="text-xs text-muted-foreground">
+              {activeUser
+                ? <span>Logged in as <strong>{activeUser.name}</strong></span>
+                : <span>Using Replit Auth (your real account)</span>
+              }
+            </div>
+            {activeUserId && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={logout}
+                data-testid="button-dev-logout"
+              >
+                <LogOut className="h-3 w-3" />
+                Clear Dev Session
+              </Button>
+            )}
           </div>
 
           {isLoading ? (
@@ -110,10 +122,9 @@ export default function DevLogin() {
                       {grouped[role].map(u => (
                         <button
                           key={u.id}
-                          onClick={() => loginAs(u.id)}
-                          disabled={!!switching}
+                          onClick={() => loginAs(u.id, u.name)}
                           data-testid={`button-login-as-${u.id}`}
-                          className="w-full flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
+                          className="w-full flex items-center justify-between p-2.5 rounded-lg border hover:bg-muted/50 transition-colors text-left"
                         >
                           <div>
                             <p className="text-sm font-medium">{u.name || u.id}</p>
@@ -123,8 +134,8 @@ export default function DevLogin() {
                             {u.approvalStatus === "pending" && (
                               <Badge variant="outline" className="text-xs px-1.5 py-0">pending</Badge>
                             )}
-                            {switching === u.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            {activeUserId === u.id ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
                             ) : (
                               <Badge className={`text-xs px-1.5 py-0 ${roleColors[u.role] || ""}`}>
                                 {u.role}
@@ -142,7 +153,7 @@ export default function DevLogin() {
 
           <div className="p-3 border-t bg-muted/20">
             <p className="text-xs text-muted-foreground text-center">
-              This page is only available in development and is hidden in production.
+              Session stored in browser — only works in development.
             </p>
           </div>
         </div>
