@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "./use-auth";
 import { useQuery } from "@tanstack/react-query";
 import type { UserProfile } from "@shared/schema";
@@ -7,6 +7,7 @@ type WSMessage = { type: string; [key: string]: any };
 type MessageHandler = (msg: WSMessage) => void;
 
 let globalSocket: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const handlers = new Set<MessageHandler>();
 
 function getWsUrl(): string {
@@ -15,36 +16,54 @@ function getWsUrl(): string {
 }
 
 function connect(userId: string, role: string, name: string, cleanerId?: string) {
-  if (globalSocket && globalSocket.readyState === WebSocket.OPEN) return;
+  // Don't create a new socket if one is already open or connecting
+  if (
+    globalSocket &&
+    (globalSocket.readyState === WebSocket.OPEN ||
+      globalSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    return;
+  }
 
-  globalSocket = new WebSocket(getWsUrl());
+  const socket = new WebSocket(getWsUrl());
+  globalSocket = socket;
 
-  globalSocket.onopen = () => {
-    globalSocket!.send(JSON.stringify({ type: "auth", userId, role, name, cleanerId }));
+  socket.onopen = () => {
+    // Only send if this socket is still the active one and actually open
+    if (socket === globalSocket && socket.readyState === WebSocket.OPEN) {
+      try {
+        socket.send(JSON.stringify({ type: "auth", userId, role, name, cleanerId }));
+      } catch {}
+    }
   };
 
-  globalSocket.onmessage = (event) => {
+  socket.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data);
       handlers.forEach((h) => h(msg));
     } catch {}
   };
 
-  globalSocket.onclose = () => {
-    globalSocket = null;
-    setTimeout(() => {
+  socket.onclose = () => {
+    if (socket === globalSocket) {
+      globalSocket = null;
+    }
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
       if (userId) connect(userId, role, name, cleanerId);
     }, 3000);
   };
 
-  globalSocket.onerror = () => {
-    globalSocket?.close();
+  socket.onerror = () => {
+    try { socket.close(); } catch {}
   };
 }
 
 export function sendWsMessage(payload: object) {
   if (globalSocket && globalSocket.readyState === WebSocket.OPEN) {
-    globalSocket.send(JSON.stringify(payload));
+    try {
+      globalSocket.send(JSON.stringify(payload));
+    } catch {}
   }
 }
 
