@@ -1,11 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, Clock, Plus, Star, Navigation } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle } from "lucide-react";
 import type { ServiceRequest, Review } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
@@ -27,8 +40,16 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+const CANCELABLE = ["pending", "broadcasting", "confirmed"];
+
+function hoursUntil(date: string | Date) {
+  return (new Date(date).getTime() - Date.now()) / (1000 * 60 * 60);
+}
+
 export default function MyBookings() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const [cancelTarget, setCancelTarget] = useState<ServiceRequest | null>(null);
 
   const { data: bookings, isLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests/mine"],
@@ -46,6 +67,34 @@ export default function MyBookings() {
   const unratedCompleted = (bookings || []).filter(
     b => b.status === "completed" && b.jobId && !reviewsByJobId[b.jobId]
   );
+
+  const cancelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/service-requests/${id}/cancel`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to cancel");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests/mine"] });
+      setCancelTarget(null);
+      toast({
+        title: data.cancellationFeeCharged ? "Booking cancelled — $50 fee charged" : "Booking cancelled",
+        description: data.message,
+        variant: data.cancellationFeeCharged ? "destructive" : "default",
+      });
+    },
+    onError: (err: Error) => {
+      setCancelTarget(null);
+      toast({ title: "Could not cancel", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const feeApplies = cancelTarget
+    ? hoursUntil(cancelTarget.requestedDate) <= 24 && hoursUntil(cancelTarget.requestedDate) > 0
+    : false;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -114,6 +163,8 @@ export default function MyBookings() {
         <div className="space-y-4">
           {bookings.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).map(booking => {
             const review = booking.jobId ? reviewsByJobId[booking.jobId] : null;
+            const canCancel = CANCELABLE.includes(booking.status);
+            const hours = hoursUntil(booking.requestedDate);
             return (
               <Card key={booking.id} className="hover:shadow-md transition-shadow" data-testid={`card-booking-${booking.id}`}>
                 <CardContent className="p-5">
@@ -127,6 +178,9 @@ export default function MyBookings() {
                           <span className="text-sm font-medium text-primary" data-testid={`text-price-${booking.id}`}>
                             ${Number(booking.estimatedPrice).toFixed(0)}
                           </span>
+                        )}
+                        {(booking as any).cancellationFeeCharged && (
+                          <Badge variant="destructive" className="text-xs">$50 Fee Charged</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-sm">
@@ -150,6 +204,11 @@ export default function MyBookings() {
                         <span className="text-xs">
                           {booking.bedrooms}BR / {booking.bathrooms}BA
                         </span>
+                        {canCancel && hours > 0 && hours <= 24 && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" /> $50 fee if cancelled now
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap justify-end">
@@ -184,6 +243,17 @@ export default function MyBookings() {
                           <span className="text-xs text-muted-foreground ml-1">Rated</span>
                         </div>
                       )}
+                      {canCancel && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                          onClick={() => setCancelTarget(booking)}
+                          data-testid={`button-cancel-${booking.id}`}
+                        >
+                          <X className="h-3.5 w-3.5" /> Cancel
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -192,6 +262,55 @@ export default function MyBookings() {
           })}
         </div>
       )}
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={open => !open && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {feeApplies ? (
+                <><AlertTriangle className="h-5 w-5 text-amber-500" /> Cancellation Fee Applies</>
+              ) : (
+                "Cancel this booking?"
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  You're about to cancel your cleaning at{" "}
+                  <strong>{cancelTarget?.propertyAddress}</strong> on{" "}
+                  <strong>
+                    {cancelTarget && new Date(cancelTarget.requestedDate).toLocaleDateString("en-US", {
+                      weekday: "long", month: "long", day: "numeric"
+                    })}
+                  </strong>.
+                </p>
+                {feeApplies ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      ⚠️ Since this service is within 24 hours, a <strong>$50 cancellation fee</strong> will be charged to your saved card per our cancellation policy.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-green-700 dark:text-green-400">
+                    ✅ No cancellation fee — you're cancelling more than 24 hours before the service.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-dialog-no">Keep Booking</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelTarget && cancelMutation.mutate(cancelTarget.id)}
+              className={feeApplies ? "bg-red-600 hover:bg-red-700" : ""}
+              disabled={cancelMutation.isPending}
+              data-testid="button-cancel-dialog-confirm"
+            >
+              {cancelMutation.isPending ? "Cancelling..." : feeApplies ? "Cancel & Pay $50 Fee" : "Yes, Cancel Booking"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

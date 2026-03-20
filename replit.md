@@ -15,6 +15,17 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **Routing**: Wouter
 - **State**: TanStack React Query
 
+## Client Payment System
+- **Card storage**: Stripe SetupIntent flow — clients save a card in My Account (Billing tab) using `@stripe/react-stripe-js` Elements
+- **Payment method API**: `GET/POST/DELETE /api/billing/payment-method`, `POST /api/billing/setup-intent`
+- **Booking gate**: Request Service page checks for saved card on file; disables submit and shows "Add Card" link if none
+- **Cancellation policy**: $50 fee applies when canceling within 24 hours of scheduled SERVICE time (regardless of booking date)
+  - Cancellation endpoint: `POST /api/service-requests/:id/cancel` — checks hours until service, charges $50 via PaymentIntent if within window
+  - My Bookings shows inline warning "⚠️ $50 fee if cancelled now" on eligible bookings
+  - Confirmation dialog shows free vs. paid cancellation clearly
+- **Schema additions**: `userProfiles` — `stripeCustomerId`, `stripePaymentMethodId`, `stripeCardBrand`, `stripeCardLast4`; `serviceRequests` — `paymentStatus`, `canceledAt`, `cancellationFeeCharged`
+- **Test mode**: Stripe test card 4242 4242 4242 4242 is documented in the billing UI
+
 ## Tech Stack (additional)
 - **Email**: SendGrid (via Replit integration) for transactional emails (application approved/rejected)
 - **Real-time**: WebSocket server (ws package) at /ws path for live location, job status, in-app chat

@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp } from "lucide-react";
+import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp, CreditCard, AlertCircle } from "lucide-react";
 import { AddressSearch } from "@/components/address-search";
 
 interface SurgeData {
@@ -42,6 +42,9 @@ export default function RequestService() {
   const addressPrefilled = useRef(false);
 
   const { data: profile } = useQuery<UserProfile | null>({ queryKey: ["/api/profile"] });
+  const { data: paymentMethod } = useQuery<{ hasCard: boolean; brand?: string; last4?: string }>({
+    queryKey: ["/api/billing/payment-method"],
+  });
 
   const [formData, setFormData] = useState({
     propertyAddress: "",
@@ -139,6 +142,14 @@ export default function RequestService() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!paymentMethod?.hasCard) {
+      toast({
+        title: "Payment method required",
+        description: "Please add a card in My Account before booking a service.",
+        variant: "destructive",
+      });
+      return;
+    }
     mutation.mutate(formData);
   };
 
@@ -158,6 +169,26 @@ export default function RequestService() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {paymentMethod && !paymentMethod.hasCard && (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <p className="font-medium text-amber-700 dark:text-amber-400">Payment method required</p>
+                  <p className="text-amber-600 dark:text-amber-500 text-xs mt-0.5">You need a saved card to book a cleaning service.</p>
+                </div>
+                <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-300" onClick={() => navigate("/account")} type="button" data-testid="button-add-card-link">
+                  <CreditCard className="h-3.5 w-3.5 mr-1" /> Add Card
+                </Button>
+              </div>
+            )}
+            {paymentMethod?.hasCard && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                <CreditCard className="h-4 w-4 text-green-600 shrink-0" />
+                <p className="text-xs text-green-700 dark:text-green-400">
+                  Billing: <span className="capitalize font-medium">{paymentMethod.brand}</span> ···· {paymentMethod.last4}
+                </p>
+              </div>
+            )}
             <div className="space-y-4">
               <h3 className="font-medium flex items-center gap-2 text-sm">
                 <Sparkles className="h-4 w-4 text-primary" /> Service Type
@@ -461,7 +492,7 @@ export default function RequestService() {
               type="submit"
               className={`w-full ${isOnDemand ? "bg-amber-500 hover:bg-amber-600" : ""}`}
               size="lg"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || paymentMethod?.hasCard === false}
               data-testid="button-submit-request"
             >
               {mutation.isPending

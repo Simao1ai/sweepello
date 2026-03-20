@@ -14,6 +14,10 @@ export const userProfiles = pgTable("user_profiles", {
   city: text("city"),
   zipCode: text("zip_code"),
   approvalStatus: text("approval_status"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripePaymentMethodId: text("stripe_payment_method_id"),
+  stripeCardBrand: text("stripe_card_brand"),
+  stripeCardLast4: text("stripe_card_last4"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -92,6 +96,9 @@ export const serviceRequests = pgTable("service_requests", {
   squareFootage: integer("square_footage"),
   isOnDemand: boolean("is_on_demand").notNull().default(false),
   surgeMultiplier: decimal("surge_multiplier", { precision: 4, scale: 2 }).default("1.00"),
+  paymentStatus: text("payment_status").default("pending"),
+  canceledAt: timestamp("canceled_at"),
+  cancellationFeeCharged: boolean("cancellation_fee_charged").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

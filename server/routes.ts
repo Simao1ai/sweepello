@@ -1186,6 +1186,161 @@ export async function registerRoutes(
     }
   });
 
+  // === CLIENT BILLING (Stripe) ===
+
+  app.get("/api/billing/payment-method", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      if (profile.stripeCardLast4) {
+        return res.json({
+          hasCard: true,
+          brand: profile.stripeCardBrand,
+          last4: profile.stripeCardLast4,
+          customerId: profile.stripeCustomerId,
+        });
+      }
+      return res.json({ hasCard: false });
+    } catch (err: unknown) {
+      res.status(500).json({ message: "Failed to get payment method" });
+    }
+  });
+
+  app.post("/api/billing/setup-intent", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = (req as any).user;
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const stripe = await getUncachableStripeClient();
+      let customerId = profile.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user?.email || undefined,
+          name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : undefined,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await storage.updateUserProfile(userId, { stripeCustomerId: customerId });
+      }
+      const setupIntent = await stripe.setupIntents.create({
+        customer: customerId,
+        payment_method_types: ["card"],
+      });
+      res.json({ clientSecret: setupIntent.client_secret });
+    } catch (err: unknown) {
+      console.error("Setup intent error:", err);
+      res.status(500).json({ message: "Failed to create setup intent" });
+    }
+  });
+
+  app.post("/api/billing/payment-method/save", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { paymentMethodId } = req.body;
+      if (!paymentMethodId) return res.status(400).json({ message: "paymentMethodId required" });
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const stripe = await getUncachableStripeClient();
+      const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (profile.stripeCustomerId) {
+        await stripe.paymentMethods.attach(paymentMethodId, { customer: profile.stripeCustomerId });
+        await stripe.customers.update(profile.stripeCustomerId, {
+          invoice_settings: { default_payment_method: paymentMethodId },
+        });
+      }
+      await storage.updateUserProfile(userId, {
+        stripePaymentMethodId: paymentMethodId,
+        stripeCardBrand: pm.card?.brand || null,
+        stripeCardLast4: pm.card?.last4 || null,
+      });
+      res.json({ success: true, brand: pm.card?.brand, last4: pm.card?.last4 });
+    } catch (err: unknown) {
+      console.error("Save payment method error:", err);
+      res.status(500).json({ message: "Failed to save payment method" });
+    }
+  });
+
+  app.delete("/api/billing/payment-method", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      if (profile.stripePaymentMethodId) {
+        const stripe = await getUncachableStripeClient();
+        try {
+          await stripe.paymentMethods.detach(profile.stripePaymentMethodId);
+        } catch { /* already detached */ }
+      }
+      await storage.updateUserProfile(userId, {
+        stripePaymentMethodId: null,
+        stripeCardBrand: null,
+        stripeCardLast4: null,
+      });
+      res.json({ success: true });
+    } catch (err: unknown) {
+      res.status(500).json({ message: "Failed to remove payment method" });
+    }
+  });
+
+  app.post("/api/service-requests/:id/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const sr = await storage.getServiceRequest(req.params.id);
+      if (!sr) return res.status(404).json({ message: "Service request not found" });
+      if (sr.userId !== userId) return res.status(403).json({ message: "Not your booking" });
+      const cancelableStatuses = ["pending", "broadcasting", "confirmed"];
+      if (!cancelableStatuses.includes(sr.status)) {
+        return res.status(400).json({ message: "Cannot cancel a booking that is in progress or completed" });
+      }
+
+      const serviceDate = new Date(sr.requestedDate);
+      const now = new Date();
+      const hoursUntilService = (serviceDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+      const withinCancellationWindow = hoursUntilService <= 24 && hoursUntilService > 0;
+      let cancellationFeeCharged = false;
+
+      if (withinCancellationWindow) {
+        const profile = await storage.getUserProfile(userId);
+        if (profile?.stripeCustomerId && profile?.stripePaymentMethodId) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            await stripe.paymentIntents.create({
+              amount: 5000,
+              currency: "usd",
+              customer: profile.stripeCustomerId,
+              payment_method: profile.stripePaymentMethodId,
+              confirm: true,
+              off_session: true,
+              description: `Cancellation fee for service request ${sr.id}`,
+            });
+            cancellationFeeCharged = true;
+          } catch (feeErr) {
+            console.error("Failed to charge cancellation fee:", feeErr);
+          }
+        }
+      }
+
+      await storage.updateServiceRequest(req.params.id, {
+        status: "cancelled",
+        canceledAt: new Date(),
+        cancellationFeeCharged,
+      });
+
+      res.json({
+        success: true,
+        cancellationFeeCharged,
+        message: cancellationFeeCharged
+          ? "Booking cancelled. A $50 cancellation fee has been charged to your card."
+          : "Booking cancelled successfully.",
+      });
+    } catch (err: unknown) {
+      console.error("Cancel error:", err);
+      res.status(500).json({ message: "Failed to cancel booking" });
+    }
+  });
+
   // === CONTRACTOR PAYOUTS ===
   app.get("/api/contractor/payouts", isAuthenticated, async (req, res) => {
     try {
