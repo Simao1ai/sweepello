@@ -38,6 +38,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -115,6 +116,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ role, user }: AppSidebarProps) {
   const [location] = useLocation();
+  const { setOpenMobile } = useSidebar();
 
   const { data: onboarding } = useQuery<ContractorOnboarding | null>({
     queryKey: ["/api/contractor/onboarding"],
@@ -144,7 +146,7 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href={defaultPath} data-testid="link-home">
+        <Link href={defaultPath} data-testid="link-home" onClick={() => setOpenMobile(false)}>
           <div className="flex items-center gap-2">
             <div>
               <h2
@@ -175,7 +177,11 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
                       data-active={isActive}
                       className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                     >
-                      <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
+                      <Link
+                        href={item.url}
+                        data-testid={`link-${item.title.toLowerCase().replace(/\s/g, "-")}`}
+                        onClick={() => setOpenMobile(false)}
+                      >
                         <item.icon className="h-4 w-4" />
                         <span className="flex-1">{item.title}</span>
                       </Link>

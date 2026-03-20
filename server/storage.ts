@@ -77,6 +77,7 @@ export interface IStorage {
   getReviewsByUserId(userId: string): Promise<Review[]>;
 
   getAllUserProfiles(): Promise<UserProfile[]>;
+  getUsersByRole(role: string): Promise<UserProfile[]>;
 
   getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined>;
   createContractorOnboarding(data: InsertContractorOnboarding): Promise<ContractorOnboarding>;
@@ -317,6 +318,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUserProfiles(): Promise<UserProfile[]> {
     return db.select().from(userProfiles);
+  }
+
+  async getUsersByRole(role: string): Promise<UserProfile[]> {
+    return db.select().from(userProfiles).where(eq(userProfiles.role, role as any));
   }
 
   async getContractorOnboarding(userId: string): Promise<ContractorOnboarding | undefined> {

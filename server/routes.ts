@@ -1390,6 +1390,35 @@ export async function registerRoutes(
         cancellationFeeCharged,
       });
 
+      const feeNote = cancellationFeeCharged ? " A $50 cancellation fee was charged." : "";
+      const cancelMsg = `Client cancelled the booking for ${sr.propertyAddress} (${new Date(sr.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}).${feeNote}`;
+
+      // Notify all admins
+      const admins = await storage.getUsersByRole("admin");
+      await Promise.all(admins.map(admin =>
+        storage.createNotification({
+          userId: admin.userId,
+          title: "Booking Cancelled by Client",
+          message: cancelMsg,
+          type: "job_cancelled",
+          serviceRequestId: sr.id,
+        })
+      ));
+
+      // Notify assigned cleaner (if any)
+      if (sr.assignedCleanerId) {
+        const cleaner = await storage.getCleaner(sr.assignedCleanerId);
+        if (cleaner?.userId) {
+          await storage.createNotification({
+            userId: cleaner.userId,
+            title: "Job Cancelled",
+            message: `The client has cancelled the cleaning job at ${sr.propertyAddress} on ${new Date(sr.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. This job has been removed from your schedule.`,
+            type: "job_cancelled",
+            serviceRequestId: sr.id,
+          });
+        }
+      }
+
       res.json({
         success: true,
         cancellationFeeCharged,
