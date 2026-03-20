@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle, CheckCircle2, UserCheck } from "lucide-react";
 import type { ServiceRequest, Review } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -220,6 +220,26 @@ export default function MyBookings() {
                           </span>
                         )}
                       </div>
+                      {/* Cleaner info card — shown once a cleaner is assigned */}
+                      {(booking as any).assignedCleanerName && ["confirmed", "in_route", "in_progress", "completed"].includes(booking.status) && (
+                        <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 px-3 py-2 text-sm">
+                          <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span className="font-medium text-blue-800 dark:text-blue-300">
+                            {(booking as any).assignedCleanerName}
+                          </span>
+                          {(booking as any).assignedCleanerRating != null && (
+                            <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                              <span className="font-medium">{Number((booking as any).assignedCleanerRating).toFixed(1)}</span>
+                            </span>
+                          )}
+                          {(booking as any).assignedCleanerTotalJobs > 0 && (
+                            <span className="text-muted-foreground text-xs">
+                              · {(booking as any).assignedCleanerTotalJobs} job{(booking as any).assignedCleanerTotalJobs !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap justify-end">
                       {(booking.status === "in_route" || booking.status === "in_progress") && (

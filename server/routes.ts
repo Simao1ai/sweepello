@@ -236,7 +236,22 @@ export async function registerRoutes(
   app.get("/api/service-requests/mine", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
     const requests = await storage.getServiceRequestsByUserId(userId);
-    res.json(requests);
+    // Enrich with cleaner info when assigned
+    const enriched = await Promise.all(requests.map(async (sr) => {
+      if (sr.assignedCleanerId) {
+        const cleaner = await storage.getCleaner(sr.assignedCleanerId);
+        if (cleaner) {
+          return {
+            ...sr,
+            assignedCleanerName: cleaner.name,
+            assignedCleanerRating: cleaner.rating ? Number(cleaner.rating) : null,
+            assignedCleanerTotalJobs: cleaner.totalJobs || 0,
+          };
+        }
+      }
+      return sr;
+    }));
+    res.json(enriched);
   });
 
   app.get("/api/reviews/mine", isAuthenticated, async (req, res) => {
@@ -1389,6 +1404,11 @@ export async function registerRoutes(
         canceledAt: new Date(),
         cancellationFeeCharged,
       });
+
+      // Also cancel the linked job record so it disappears from the contractor's active jobs
+      if (sr.jobId) {
+        await storage.updateJob(sr.jobId, { status: "cancelled" });
+      }
 
       const feeNote = cancellationFeeCharged ? " A $50 cancellation fee was charged." : "";
       const cancelMsg = `Client cancelled the booking for ${sr.propertyAddress} (${new Date(sr.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}).${feeNote}`;

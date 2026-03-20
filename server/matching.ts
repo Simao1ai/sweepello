@@ -289,6 +289,17 @@ export async function acceptJobOffer(offerId: string, cleanerId: string): Promis
     });
   }
 
+  // Notify the client that their cleaner has been confirmed
+  const cleanerRating = cleaner.rating ? `${Number(cleaner.rating).toFixed(1)} ★` : "New";
+  await storage.createNotification({
+    userId: request.userId,
+    title: "Your Cleaner is Confirmed!",
+    message: `${cleaner.name} (${cleanerRating}) has been assigned to your cleaning at ${request.propertyAddress} on ${new Date(request.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. They will confirm an exact arrival time shortly.`,
+    type: "job_assigned",
+    jobId: job.id,
+    serviceRequestId: request.id,
+  });
+
   return { success: true, message: "Job accepted successfully" };
 }
 
