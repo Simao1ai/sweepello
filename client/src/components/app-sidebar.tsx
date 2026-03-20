@@ -41,7 +41,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { User, ContractorOnboarding, Notification } from "@shared/schema";
+import type { User, ContractorOnboarding } from "@shared/schema";
 
 const adminNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -68,7 +68,6 @@ const contractorNavItems = [
   { title: "Dashboard", url: "/contractor/dashboard", icon: LayoutDashboard },
   { title: "My Jobs", url: "/contractor/jobs", icon: Briefcase },
   { title: "Availability", url: "/contractor/availability", icon: Clock },
-  { title: "Notifications", url: "/contractor/notifications", icon: Bell },
   { title: "Earnings", url: "/contractor/earnings", icon: TrendingUp },
   { title: "Payouts", url: "/contractor/payouts", icon: Banknote },
 ];
@@ -120,13 +119,6 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
     enabled: role === "contractor",
   });
 
-  const { data: notifications } = useQuery<Notification[]>({
-    queryKey: ["/api/notifications"],
-    enabled: role === "contractor",
-  });
-
-  const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
-
   const needsOnboarding = role === "contractor" && (!onboarding || onboarding.onboardingStatus !== "complete");
   const navItems = role === "admin"
     ? adminNavItems
@@ -174,7 +166,6 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = location === item.url || (item.url !== "/" && item.url.length > 1 && location.startsWith(item.url) && location.length <= item.url.length + 1);
-                const showBadge = item.title === "Notifications" && unreadCount > 0;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
@@ -185,11 +176,6 @@ export function AppSidebar({ role, user }: AppSidebarProps) {
                       <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
                         <item.icon className="h-4 w-4" />
                         <span className="flex-1">{item.title}</span>
-                        {showBadge && (
-                          <Badge variant="secondary" className="ml-auto h-5 min-w-5 px-1 text-xs justify-center bg-red-500/10 text-red-600 dark:text-red-400">
-                            {unreadCount}
-                          </Badge>
-                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -135,6 +135,24 @@ export async function registerRoutes(
         ));
       }
 
+      // Auto-create a clients record for client-role users so they appear in admin portal
+      if (chosenRole === "client") {
+        const authUser = await authStorage.getUser(userId);
+        const fullName = [authUser?.firstName, authUser?.lastName].filter(Boolean).join(" ") || authUser?.email || "New Client";
+        const existingClient = await storage.getClientByUserId(userId);
+        if (!existingClient) {
+          await storage.createClient({
+            userId,
+            name: fullName,
+            email: authUser?.email || undefined,
+            propertyAddress: (validated as any).address || "Address not provided",
+            city: (validated as any).city || undefined,
+            zipCode: (validated as any).zipCode || undefined,
+            propertyType: "residential",
+          });
+        }
+      }
+
       res.json(profile);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
@@ -363,6 +381,25 @@ export async function registerRoutes(
   // === ADMIN ROUTES ===
   app.get("/api/clients", isAuthenticated, async (req, res) => {
     if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+    // Auto-sync: create client records for any client-role users without one
+    const allProfiles = await storage.getAllUserProfiles();
+    const clientProfiles = allProfiles.filter(p => p.role === "client");
+    await Promise.all(clientProfiles.map(async (p) => {
+      const existing = await storage.getClientByUserId(p.userId);
+      if (!existing) {
+        const authUser = await authStorage.getUser(p.userId);
+        const fullName = [authUser?.firstName, authUser?.lastName].filter(Boolean).join(" ") || authUser?.email || "Client";
+        await storage.createClient({
+          userId: p.userId,
+          name: fullName,
+          email: authUser?.email || undefined,
+          propertyAddress: p.address || "Address not provided",
+          city: p.city || undefined,
+          zipCode: p.zipCode || undefined,
+          propertyType: "residential",
+        });
+      }
+    }));
     const allClients = await storage.getClients();
     res.json(allClients);
   });

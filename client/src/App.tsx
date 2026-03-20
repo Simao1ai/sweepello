@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminAiAgent } from "@/components/admin-ai-agent";
+import { NotificationBell } from "@/components/notification-bell";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotFound from "@/pages/not-found";
@@ -160,7 +161,7 @@ function ClientApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
+            <div className="flex items-center gap-2"><DevSwitcher /><NotificationBell /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>
@@ -209,7 +210,7 @@ function ContractorApp({ user }: { user: any }) {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center justify-between gap-1 p-2 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-2"><DevSwitcher /><ThemeToggle /></div>
+            <div className="flex items-center gap-2"><DevSwitcher /><NotificationBell /><ThemeToggle /></div>
           </header>
           <main className="flex-1 overflow-auto">
             <Switch>

@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Building2, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Search, Building2, Mail, Phone, MapPin, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Client } from "@shared/schema";
@@ -175,6 +175,7 @@ export default function Clients() {
                     <TableHead>Client</TableHead>
                     <TableHead>Property</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Rating</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Notes</TableHead>
                   </TableRow>
@@ -191,6 +192,17 @@ export default function Clients() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{client.propertyType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {client.clientRating ? (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm font-medium">{Number(client.clientRating).toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">({client.clientRatingCount})</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">–</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">

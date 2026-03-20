@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import type { UserProfile } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,9 @@ export default function RequestService() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOnDemand, setIsOnDemand] = useState(false);
+  const addressPrefilled = useRef(false);
+
+  const { data: profile } = useQuery<UserProfile | null>({ queryKey: ["/api/profile"] });
 
   const [formData, setFormData] = useState({
     propertyAddress: "",
@@ -54,6 +58,24 @@ export default function RequestService() {
     specialInstructions: "",
     preferredCleanerId: "",
   });
+
+  // Pre-fill address from user profile (only once, on first load)
+  useEffect(() => {
+    if (profile && !addressPrefilled.current) {
+      const addr = (profile as any).address;
+      const city = (profile as any).city;
+      const zip = (profile as any).zipCode;
+      if (addr || city || zip) {
+        addressPrefilled.current = true;
+        setFormData(prev => ({
+          ...prev,
+          propertyAddress: addr || prev.propertyAddress,
+          city: city || prev.city,
+          zipCode: zip || prev.zipCode,
+        }));
+      }
+    }
+  }, [profile]);
 
   const [pricing, setPricing] = useState<PricingData>({
     estimatedPrice: 0,
