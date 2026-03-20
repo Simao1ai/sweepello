@@ -99,6 +99,7 @@ export const serviceRequests = pgTable("service_requests", {
   paymentStatus: text("payment_status").default("pending"),
   canceledAt: timestamp("canceled_at"),
   cancellationFeeCharged: boolean("cancellation_fee_charged").notNull().default(false),
+  confirmedArrivalTime: text("confirmed_arrival_time"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

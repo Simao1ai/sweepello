@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle, CheckCircle2 } from "lucide-react";
 import type { ServiceRequest, Review } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -188,19 +188,29 @@ export default function MyBookings() {
                         <span data-testid={`text-address-${booking.id}`}>{booking.propertyAddress}</span>
                         {booking.city && <span className="text-muted-foreground">- {booking.city}</span>}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
                           {new Date(booking.requestedDate).toLocaleDateString("en-US", {
                             weekday: "short", month: "short", day: "numeric"
                           })}
                         </div>
-                        {booking.preferredTime && (
+                        {(booking as any).confirmedArrivalTime ? (
+                          <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Arrives at {(() => {
+                              const [h, m] = (booking as any).confirmedArrivalTime.split(":").map(Number);
+                              const isPM = h >= 12;
+                              const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+                              return `${h12}:${String(m).padStart(2, "0")} ${isPM ? "PM" : "AM"}`;
+                            })()}
+                          </div>
+                        ) : booking.preferredTime ? (
                           <div className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
                             {booking.preferredTime.charAt(0).toUpperCase() + booking.preferredTime.slice(1)}
                           </div>
-                        )}
+                        ) : null}
                         <span className="text-xs">
                           {booking.bedrooms}BR / {booking.bathrooms}BA
                         </span>
@@ -273,30 +283,24 @@ export default function MyBookings() {
                 "Cancel this booking?"
               )}
             </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  You're about to cancel your cleaning at{" "}
-                  <strong>{cancelTarget?.propertyAddress}</strong> on{" "}
-                  <strong>
-                    {cancelTarget && new Date(cancelTarget.requestedDate).toLocaleDateString("en-US", {
-                      weekday: "long", month: "long", day: "numeric"
-                    })}
-                  </strong>.
-                </p>
-                {feeApplies ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3">
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      ⚠️ Since this service is within 24 hours, a <strong>$50 cancellation fee</strong> will be charged to your saved card per our cancellation policy.
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-green-700 dark:text-green-400">
-                    ✅ No cancellation fee — you're cancelling more than 24 hours before the service.
-                  </p>
-                )}
-              </div>
+            <AlertDialogDescription className="space-y-3">
+              You're about to cancel your cleaning at{" "}
+              <strong>{cancelTarget?.propertyAddress}</strong> on{" "}
+              <strong>
+                {cancelTarget && new Date(cancelTarget.requestedDate).toLocaleDateString("en-US", {
+                  weekday: "long", month: "long", day: "numeric"
+                })}
+              </strong>.
             </AlertDialogDescription>
+            {feeApplies ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm font-medium text-amber-700 dark:text-amber-400">
+                ⚠️ Since this service is within 24 hours, a <strong>$50 cancellation fee</strong> will be charged to your saved card per our cancellation policy.
+              </div>
+            ) : (
+              <p className="text-sm text-green-700 dark:text-green-400">
+                ✅ No cancellation fee — you're cancelling more than 24 hours before the service.
+              </p>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-dialog-no">Keep Booking</AlertDialogCancel>

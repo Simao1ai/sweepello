@@ -126,12 +126,12 @@ function BillingSection() {
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
                 <div>
-                  <p className="text-sm font-medium flex items-center gap-2">
+                  <div className="text-sm font-medium flex items-center gap-2">
                     {brandIcons[paymentMethod.brand || ""] || "💳"}
                     <span className="capitalize">{paymentMethod.brand}</span>
                     <Badge variant="secondary" className="text-xs">···· {paymentMethod.last4}</Badge>
-                  </p>
-                  <p className="text-xs text-muted-foreground">Card on file</p>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Card on file</div>
                 </div>
               </div>
               <Button

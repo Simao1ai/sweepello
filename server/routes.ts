@@ -719,7 +719,60 @@ export async function registerRoutes(
     const cleaner = await storage.getCleanerByUserId(userId);
     if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
     const contractorJobs = await storage.getJobsByCleanerId(cleaner.id);
-    res.json(contractorJobs);
+    // Enrich with service request data for each job
+    const enriched = await Promise.all(contractorJobs.map(async (job) => {
+      if (!job.serviceRequestId) return job;
+      const sr = await storage.getServiceRequest(job.serviceRequestId);
+      return {
+        ...job,
+        preferredTime: sr?.preferredTime || null,
+        confirmedArrivalTime: sr?.confirmedArrivalTime || null,
+        serviceRequestId: job.serviceRequestId,
+      };
+    }));
+    res.json(enriched);
+  });
+
+  app.patch("/api/contractor/jobs/:id/confirm-arrival", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const contractor = await isContractor(req);
+      if (!contractor) return res.status(403).json({ message: "Contractor only" });
+      const cleaner = await storage.getCleanerByUserId(userId);
+      if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
+      const job = await storage.getJob(req.params.id);
+      if (!job || job.cleanerId !== cleaner.id) return res.status(403).json({ message: "Not your job" });
+      const { arrivalTime } = req.body;
+      if (!arrivalTime || typeof arrivalTime !== "string") {
+        return res.status(400).json({ message: "arrivalTime required (HH:MM)" });
+      }
+      if (!job.serviceRequestId) return res.status(400).json({ message: "No service request linked" });
+      const sr = await storage.getServiceRequest(job.serviceRequestId);
+      if (!sr) return res.status(404).json({ message: "Service request not found" });
+      await storage.updateServiceRequest(job.serviceRequestId, { confirmedArrivalTime: arrivalTime });
+      // Notify the client
+      const slotLabels: Record<string, string> = {
+        morning: "Morning (8am–12pm)",
+        afternoon: "Afternoon (12pm–4pm)",
+        evening: "Evening (4pm–8pm)",
+      };
+      const [h, m] = arrivalTime.split(":").map(Number);
+      const isPM = h >= 12;
+      const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      const formatted = `${hour12}:${String(m).padStart(2, "0")} ${isPM ? "PM" : "AM"}`;
+      await storage.createNotification({
+        userId: sr.userId,
+        title: "Arrival Time Confirmed",
+        message: `Your cleaner has confirmed they will arrive at ${formatted} for your cleaning at ${sr.propertyAddress}.`,
+        type: "job_assigned",
+        serviceRequestId: sr.id,
+        jobId: job.id,
+      });
+      res.json({ success: true, confirmedArrivalTime: arrivalTime });
+    } catch (err: unknown) {
+      console.error("Confirm arrival error:", err);
+      res.status(500).json({ message: "Failed to confirm arrival time" });
+    }
   });
 
   app.get("/api/contractor/reviews", isAuthenticated, async (req, res) => {

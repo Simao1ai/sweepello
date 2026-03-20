@@ -12,13 +12,40 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Navigation } from "lucide-react";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Navigation, Clock, CheckCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket, sendWsMessage } from "@/hooks/use-websocket";
 import JobChat from "@/components/job-chat";
 import type { Job, Review } from "@shared/schema";
+
+const SLOT_BOUNDS: Record<string, { start: number; end: number; label: string }> = {
+  morning:   { start: 8,  end: 12, label: "Morning (8am – 12pm)" },
+  afternoon: { start: 12, end: 16, label: "Afternoon (12pm – 4pm)" },
+  evening:   { start: 16, end: 20, label: "Evening (4pm – 8pm)" },
+};
+
+function getSlotTimes(slot: string): string[] {
+  const bounds = SLOT_BOUNDS[slot];
+  if (!bounds) return [];
+  const times: string[] = [];
+  for (let h = bounds.start; h < bounds.end; h++) {
+    times.push(`${String(h).padStart(2, "0")}:00`);
+    if (h < bounds.end - 1 || bounds.end % 1 !== 0) {
+      times.push(`${String(h).padStart(2, "0")}:30`);
+    }
+  }
+  return times;
+}
+
+function formatTime(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const isPM = h >= 12;
+  const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${h12}:${String(m).padStart(2, "0")} ${isPM ? "PM" : "AM"}`;
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
@@ -68,6 +95,7 @@ export default function ContractorJobs() {
   const [clientRating, setClientRating] = useState(5);
   const [clientRatingNote, setClientRatingNote] = useState("");
   const [activeChatJobId, setActiveChatJobId] = useState<string | null>(null);
+  const [arrivalTimeSelections, setArrivalTimeSelections] = useState<Record<string, string>>({});
 
   const gpsWatchRef = useRef<number | null>(null);
   const [trackingJobId, setTrackingJobId] = useState<string | null>(null);
@@ -168,6 +196,21 @@ export default function ContractorJobs() {
     rateClientMutation.mutate({ jobId: ratingModal.jobId, rating: clientRating, note: clientRatingNote });
   };
 
+  const confirmArrivalMutation = useMutation({
+    mutationFn: async ({ jobId, arrivalTime }: { jobId: string; arrivalTime: string }) => {
+      const res = await apiRequest("PATCH", `/api/contractor/jobs/${jobId}/confirm-arrival`, { arrivalTime });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.message); }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/contractor/jobs"] });
+      toast({ title: "Arrival time confirmed!", description: `Client has been notified of your arrival at ${formatTime(vars.arrivalTime)}.` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   const activeJobs = jobs?.filter(j => j.status !== "completed" && j.status !== "cancelled") || [];
   const completedJobs = jobs?.filter(j => j.status === "completed") || [];
 
@@ -228,6 +271,48 @@ export default function ContractorJobs() {
                           </div>
                           {job.notes && (
                             <p className="text-xs text-muted-foreground mt-1">Note: {job.notes}</p>
+                          )}
+                          {(job as any).preferredTime && (
+                            <div className="pt-1">
+                              {(job as any).confirmedArrivalTime ? (
+                                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                  <CheckCheck className="h-3.5 w-3.5" />
+                                  Arrival confirmed: {formatTime((job as any).confirmedArrivalTime)}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    <span>Client slot: <strong>{SLOT_BOUNDS[(job as any).preferredTime]?.label || (job as any).preferredTime}</strong></span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Select
+                                      value={arrivalTimeSelections[job.id] || ""}
+                                      onValueChange={v => setArrivalTimeSelections(prev => ({ ...prev, [job.id]: v }))}
+                                    >
+                                      <SelectTrigger className="h-7 text-xs w-32" data-testid={`select-arrival-${job.id}`}>
+                                        <SelectValue placeholder="Pick time" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {getSlotTimes((job as any).preferredTime).map(t => (
+                                          <SelectItem key={t} value={t} className="text-xs">{formatTime(t)}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs gap-1 border-emerald-400 text-emerald-600 hover:bg-emerald-50"
+                                      disabled={!arrivalTimeSelections[job.id] || confirmArrivalMutation.isPending}
+                                      onClick={() => confirmArrivalMutation.mutate({ jobId: job.id, arrivalTime: arrivalTimeSelections[job.id] })}
+                                      data-testid={`button-confirm-arrival-${job.id}`}
+                                    >
+                                      <CheckCheck className="h-3 w-3" /> Confirm
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2 items-center">
