@@ -63,6 +63,25 @@ A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning 
 - **cleaners** now has statusNote, isFeatured, adminNote fields for admin management
 - **reviews** now has moderationStatus (approved/hidden/pending), adminNote, adminModifiedAt for admin moderation
 
+## Admin Detail Panels (Clients & Cleaners)
+- **Client detail**: Clicking any row in /admin/clients opens a Sheet (slide-over) showing:
+  - Client contact info (email, phone, property address, rating)
+  - Admin controls: Active toggle (can book), VIP toggle (priority matching)
+  - Inline admin note (click dashed area to edit)
+  - Service request history (sorted newest first with status badges and price)
+  - Job history (sorted newest first with margin display)
+  - API: `GET /api/admin/clients/:id` → `{ client, serviceRequests, jobs }`
+  - API: `PATCH /api/admin/clients/:id` → update any client fields
+- **Cleaner detail**: Clicking any card in /admin/cleaners opens a Sheet showing:
+  - 4 stat boxes: Rating, On-Time %, Total Jobs, Revenue
+  - Contact info + service areas + pay rate
+  - Admin controls: Active toggle (receives offers), Featured toggle (shown in client picker)
+  - Status note (short visible note on card) and admin note (internal)
+  - Job history split into Active and Past sections
+  - API: `GET /api/admin/cleaners/:id` → `{ cleaner, jobs }`
+  - API: `PATCH /api/admin/cleaners/:id` → update any cleaner fields
+- **Jobs page**: Refresh button (RefreshCw icon) added; staleTime:0 + refetchOnWindowFocus ensures fresh data always shown
+
 ## Key Features
 ### Client Portal
 - Landing page with hero image, features, how-it-works sections

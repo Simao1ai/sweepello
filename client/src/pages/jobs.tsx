@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Job, Client, Cleaner } from "@shared/schema";
@@ -57,7 +57,11 @@ export default function Jobs() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: jobs, isLoading } = useQuery<Job[]>({ queryKey: ["/api/jobs"] });
+  const { data: jobs, isLoading, refetch } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
   const { data: clients } = useQuery<Client[]>({ queryKey: ["/api/clients"] });
   const { data: cleaners } = useQuery<Cleaner[]>({ queryKey: ["/api/cleaners"] });
 
@@ -122,13 +126,24 @@ export default function Jobs() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Jobs</h1>
           <p className="text-muted-foreground">Manage cleaning job assignments and schedules</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-job">
-              <Plus className="mr-2 h-4 w-4" />
-              New Job
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            data-testid="button-refresh-jobs"
+            title="Refresh jobs"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-job">
+                <Plus className="mr-2 h-4 w-4" />
+                New Job
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Schedule New Job</DialogTitle>
@@ -203,7 +218,8 @@ export default function Jobs() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">

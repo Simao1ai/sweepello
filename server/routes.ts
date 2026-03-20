@@ -458,6 +458,39 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/clients/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+    const client = await storage.getClient(req.params.id);
+    if (!client) return res.status(404).json({ message: "Client not found" });
+    const serviceRequests = client.userId
+      ? await storage.getServiceRequestsByUserId(client.userId)
+      : [];
+    const jobs = await storage.getJobsByClientId(client.id);
+    res.json({ client, serviceRequests, jobs });
+  });
+
+  app.patch("/api/admin/clients/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+    const updated = await storage.updateClient(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ message: "Client not found" });
+    res.json(updated);
+  });
+
+  app.get("/api/admin/cleaners/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+    const cleaner = await storage.getCleaner(req.params.id);
+    if (!cleaner) return res.status(404).json({ message: "Cleaner not found" });
+    const jobs = await storage.getJobsByCleanerId(cleaner.id);
+    res.json({ cleaner, jobs });
+  });
+
+  app.patch("/api/admin/cleaners/:id", isAuthenticated, async (req, res) => {
+    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
+    const updated = await storage.updateCleaner(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ message: "Cleaner not found" });
+    res.json(updated);
+  });
+
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
     const allJobs = await storage.getJobs();
