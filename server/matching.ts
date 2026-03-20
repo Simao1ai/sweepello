@@ -155,7 +155,7 @@ export async function broadcastJobOffers(serviceRequestId: string): Promise<{ of
   }
 
   let preferredNotified = false;
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
 
   const scheduledDate = new Date(request.requestedDate).toLocaleDateString("en-US", {
     weekday: "short", month: "short", day: "numeric",

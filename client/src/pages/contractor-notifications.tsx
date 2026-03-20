@@ -121,6 +121,7 @@ export default function ContractorNotifications() {
           {sorted.map(notification => {
             const isJobOffer = notification.type === "job_offer";
             const isPreferred = notification.title?.includes("Preferred") || notification.title?.includes("Priority");
+            const offerPending = isJobOffer && (notification as any).offerStatus === "offered";
 
             return (
               <Card
@@ -172,7 +173,7 @@ export default function ContractorNotifications() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {isJobOffer && notification.jobOfferId && !notification.isRead && (
+                      {offerPending && notification.jobOfferId && (
                         <>
                           <Button
                             size="sm"
@@ -197,6 +198,22 @@ export default function ContractorNotifications() {
                             <X className="h-3 w-3" /> Decline
                           </Button>
                         </>
+                      )}
+                      {isJobOffer && !offerPending && (notification as any).offerStatus && (
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs ${
+                            (notification as any).offerStatus === "accepted"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                              : (notification as any).offerStatus === "declined"
+                              ? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                              : "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                          }`}
+                          data-testid={`badge-offer-status-${notification.id}`}
+                        >
+                          {(notification as any).offerStatus === "accepted" ? "Accepted" :
+                           (notification as any).offerStatus === "declined" ? "Declined" : "Expired"}
+                        </Badge>
                       )}
                       {!isJobOffer && !notification.isRead && (
                         <Button

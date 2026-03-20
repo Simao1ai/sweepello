@@ -934,7 +934,16 @@ export async function registerRoutes(
   app.get("/api/notifications", isAuthenticated, async (req, res) => {
     const userId = getUserId(req);
     const notifs = await storage.getNotificationsByUserId(userId);
-    res.json(notifs);
+    // Enrich job_offer notifications with current offer status so the UI
+    // can show Accept/Decline regardless of whether the notification was read
+    const enriched = await Promise.all(notifs.map(async (n) => {
+      if (n.type === "job_offer" && n.jobOfferId) {
+        const offer = await storage.getJobOffer(n.jobOfferId);
+        return { ...n, offerStatus: offer?.status ?? "expired" };
+      }
+      return { ...n, offerStatus: null };
+    }));
+    res.json(enriched);
   });
 
   app.patch("/api/notifications/:id/read", isAuthenticated, async (req, res) => {
