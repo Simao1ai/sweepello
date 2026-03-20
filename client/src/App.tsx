@@ -46,7 +46,6 @@ import type { UserProfile, ContractorOnboarding as ContractorOnboardingType } fr
 
 function DevSwitcher() {
   const [, navigate] = useLocation();
-  if (!import.meta.env.DEV) return null;
   return (
     <button
       onClick={() => navigate("/dev-login")}
@@ -55,6 +54,21 @@ function DevSwitcher() {
     >
       <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
       Dev
+    </button>
+  );
+}
+
+function FloatingDevButton() {
+  const [location, navigate] = useLocation();
+  if (location === "/dev-login") return null;
+  return (
+    <button
+      onClick={() => navigate("/dev-login")}
+      data-testid="button-floating-dev"
+      className="fixed bottom-4 left-4 z-[9999] flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg bg-amber-400 hover:bg-amber-500 text-amber-950 transition-colors"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-900/50 animate-pulse" />
+      Dev Login
     </button>
   );
 }
@@ -232,6 +246,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AppContent />
+          <FloatingDevButton />
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
