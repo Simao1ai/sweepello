@@ -116,7 +116,7 @@ export function log(message: string, source = "express") {
   // 2. Rate limiters — scoped by endpoint sensitivity
   const generalLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1 minute
-    max: 200,                   // 200 req/min per IP
+    max: 100,                   // 100 req/min per IP
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many requests, please slow down." },
@@ -124,8 +124,8 @@ export function log(message: string, source = "express") {
   });
 
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: 30,                    // 30 auth attempts per 15 min
+    windowMs: 60 * 1000,       // 1 minute
+    max: 5,                     // 5 auth attempts per minute per IP
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: "Too many authentication attempts, try again later." },
