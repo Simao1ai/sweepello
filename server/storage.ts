@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, desc, gte, sql as drizzleSql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql as drizzleSql } from "drizzle-orm";
 import {
   clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages, aiUsageLogs, recurringBookings, jobPhotos,
   type Client, type InsertClient,
@@ -114,6 +114,7 @@ export interface IStorage {
   updateRecurringBooking(id: string, data: Partial<RecurringBooking>): Promise<RecurringBooking | undefined>;
   deleteRecurringBooking(id: string): Promise<boolean>;
   getAllRecurringBookings(): Promise<RecurringBooking[]>;
+  getActiveRecurringBookingsDue(asOf: Date): Promise<RecurringBooking[]>;
 
   // Job photos
   getJobPhotos(jobId: string): Promise<JobPhoto[]>;
@@ -545,6 +546,15 @@ export class DatabaseStorage implements IStorage {
 
   async getAllRecurringBookings(): Promise<RecurringBooking[]> {
     return db.select().from(recurringBookings).orderBy(desc(recurringBookings.createdAt));
+  }
+
+  async getActiveRecurringBookingsDue(asOf: Date): Promise<RecurringBooking[]> {
+    return db.select().from(recurringBookings).where(
+      and(
+        eq(recurringBookings.isActive, true),
+        lte(recurringBookings.nextServiceDate, asOf),
+      )
+    );
   }
 
   // === JOB PHOTOS ===

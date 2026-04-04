@@ -8,6 +8,7 @@ import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { setupWebSocket } from "./ws";
 import { registerAiAgentRoutes } from "./ai-agent";
+import { startRecurringBookingScheduler } from "./scheduler";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import helmet from "helmet";
@@ -291,6 +292,8 @@ export function log(message: string, source = "express") {
   `).catch((err) => console.error("Profit backfill error:", err));
 
   await registerRoutes(httpServer, app);
+
+  startRecurringBookingScheduler();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
