@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle, CheckCircle2, UserCheck, RefreshCw, Pencil } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, Star, Navigation, X, AlertTriangle, CheckCircle2, UserCheck, RefreshCw, Pencil, Camera, ImageIcon } from "lucide-react";
 import type { ServiceRequest, Review } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -103,6 +103,7 @@ export default function MyBookings() {
   const [cancelTarget, setCancelTarget] = useState<ServiceRequest | null>(null);
   const [showNewRecurring, setShowNewRecurring] = useState(false);
   const [form, setForm] = useState<NewRecurringForm>(defaultForm);
+  const [photoJobId, setPhotoJobId] = useState<string | null>(null);
 
   const { data: bookings, isLoading } = useQuery<ServiceRequest[]>({
     queryKey: ["/api/service-requests/mine"],
@@ -114,6 +115,16 @@ export default function MyBookings() {
 
   const { data: recurring, isLoading: recurringLoading } = useQuery<RecurringBooking[]>({
     queryKey: ["/api/recurring-bookings"],
+  });
+
+  const { data: jobPhotos, isLoading: photosLoading } = useQuery<{ id: string; type: string; url: string }[]>({
+    queryKey: ["/api/jobs", photoJobId, "photos"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${photoJobId}/photos`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load photos");
+      return res.json();
+    },
+    enabled: !!photoJobId,
   });
 
   const reviewsByJobId = (myReviews || []).reduce<Record<string, Review>>((acc, r) => {
@@ -353,6 +364,17 @@ export default function MyBookings() {
                               data-testid={`button-track-${booking.id}`}
                             >
                               <Navigation className="h-3.5 w-3.5" /> Track
+                            </Button>
+                          )}
+                          {booking.status === "completed" && booking.jobId && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={() => setPhotoJobId(booking.jobId!)}
+                              data-testid={`button-photos-${booking.id}`}
+                            >
+                              <Camera className="h-3.5 w-3.5" /> Photos
                             </Button>
                           )}
                           {booking.status === "completed" && booking.jobId && !review && (
@@ -653,6 +675,54 @@ export default function MyBookings() {
             >
               {createRecurringMutation.isPending ? "Creating..." : "Create Schedule"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── JOB PHOTOS DIALOG ─── */}
+      <Dialog open={!!photoJobId} onOpenChange={open => { if (!open) setPhotoJobId(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" /> Job Photos
+            </DialogTitle>
+          </DialogHeader>
+          {photosLoading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map(i => <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />)}
+            </div>
+          ) : !jobPhotos?.length ? (
+            <div className="flex flex-col items-center py-12 text-center text-muted-foreground gap-3">
+              <ImageIcon className="h-12 w-12" />
+              <p className="font-medium">No photos uploaded yet</p>
+              <p className="text-sm">Your cleaner hasn't uploaded any photos for this job.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {["before", "after"].map(type => {
+                const photos = jobPhotos.filter(p => p.type === type);
+                if (!photos.length) return null;
+                return (
+                  <div key={type}>
+                    <p className="text-sm font-semibold capitalize mb-2 text-muted-foreground">{type} Photos ({photos.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {photos.map(p => (
+                        <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" data-testid={`client-photo-${p.id}`}>
+                          <img
+                            src={p.url}
+                            alt={`${type} photo`}
+                            className="aspect-square w-full rounded-lg object-cover hover:opacity-90 transition-opacity border border-border"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPhotoJobId(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

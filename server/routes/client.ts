@@ -7,7 +7,6 @@ import { getUncachableStripeClient, getStripePublishableKey } from "../stripeCli
 import {
   sendCancellationConfirmedEmail,
   sendRecurringBookingCreatedEmail,
-  sendBookingConfirmedEmail,
 } from "../sendgrid";
 import { z } from "zod";
 import { getUserId, isAdmin, handleZodError } from "./helpers";
