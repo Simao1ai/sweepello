@@ -9,6 +9,15 @@ I prefer simple language. I like functional programming. I want iterative develo
 ## System Architecture
 The platform is built with a modern web stack: React + TypeScript + Vite + Tailwind CSS + Shadcn UI for the frontend, and Express.js + TypeScript for the backend. PostgreSQL with Drizzle ORM is used for the database. Authentication is handled via Replit Auth, supporting OIDC with Google, GitHub, and email. Stripe Connect is integrated for payment processing, including express accounts for contractor payouts and `stripe-replit-sync` for schema and webhook management. Routing is managed by Wouter, and state management utilizes TanStack React Query.
 
+### Backend Route Structure
+`server/routes.ts` is a thin orchestrator that delegates to five focused modules:
+- `server/routes/helpers.ts` — shared utilities: `getUserId`, `isAdmin`, `isContractor`, `isAuthorizedForJob`, `handleZodError`, multer upload config
+- `server/routes/auth.ts` — dev login switcher, user profile (`/api/profile`, `/api/dev/*`)
+- `server/routes/client.ts` — client portal, pricing, matching, Stripe billing, 3-tier cancellation policy
+- `server/routes/admin.ts` — all admin-only routes: CRUD for clients/cleaners/jobs/reviews/disputes, dashboard stats, calendar, contractor applications, AI usage stats
+- `server/routes/contractor.ts` — contractor portal, availability, job status, offers, onboarding, payouts, online status, client rating
+- `server/routes/platform.ts` — platform-wide: notifications, in-job messages, surge pricing, recurring bookings, job photos, tipping
+
 The UI/UX design emphasizes a clean and intuitive interface, with distinct portal-specific dashboards and navigation (AppSidebar). Key features include:
 - **Client Payment System**: Secure card storage via Stripe SetupIntent, $50 cancellation fee within 24 hours, and a tipping system for cleaners post-service.
 - **Recurring Bookings**: Clients can set up, pause, or delete recurring cleaning schedules.
