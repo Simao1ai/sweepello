@@ -8,6 +8,8 @@ import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { setupWebSocket } from "./ws";
 import { registerAiAgentRoutes } from "./ai-agent";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 const app = express();
 const httpServer = createServer(app);
@@ -179,6 +181,17 @@ export function log(message: string, source = "express") {
   const { seedDatabase } = await import("./seed");
   await seedDatabase().catch((err) => console.error("Seed error:", err));
   await ensureAdminUser().catch((err) => console.error("Admin seed error:", err));
+
+  // Fix 7: Backfill profit for any jobs that were created before profit computation was added.
+  // profit = price - cleaner_pay. This is a one-time idempotent update that skips jobs with profit already set.
+  await db.execute(sql`
+    UPDATE jobs
+    SET profit = ROUND((CAST(price AS numeric) - CAST(cleaner_pay AS numeric))::numeric, 2)
+    WHERE profit IS NULL
+      AND cleaner_pay IS NOT NULL
+      AND price IS NOT NULL
+  `).catch((err) => console.error("Profit backfill error:", err));
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

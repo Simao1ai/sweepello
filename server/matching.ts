@@ -104,15 +104,28 @@ export async function findMatchingCleaners(request: ServiceRequest): Promise<Mat
   const requestedDate = new Date(request.requestedDate);
   const dayOfWeek = requestedDate.getDay();
 
+  // Normalize the requested date to a YYYY-MM-DD string for day-level comparison
+  const requestedDateStr = requestedDate.toISOString().slice(0, 10);
+
   const availableCleaners: Cleaner[] = [];
   for (const cleaner of matched) {
+    // Step 1: Check weekly availability schedule
     const availability = await storage.getCleanerAvailability(cleaner.id);
-    if (availability.length === 0) {
-      availableCleaners.push(cleaner);
-      continue;
+    if (availability.length > 0) {
+      const dayAvail = availability.find(a => a.dayOfWeek === dayOfWeek);
+      if (!dayAvail || !dayAvail.isAvailable) continue;
     }
-    const dayAvail = availability.find(a => a.dayOfWeek === dayOfWeek);
-    if (dayAvail && dayAvail.isAvailable) {
+
+    // Fix 10: Step 2: Check for existing confirmed/in_progress/in_route jobs on the same calendar date.
+    // Exclude any cleaner who is already booked on that day.
+    const existingJobs = await storage.getJobsByCleanerId(cleaner.id);
+    const hasConflict = existingJobs.some(job => {
+      if (!["assigned", "in_route", "in_progress"].includes(job.status)) return false;
+      const jobDateStr = new Date(job.scheduledDate).toISOString().slice(0, 10);
+      return jobDateStr === requestedDateStr;
+    });
+
+    if (!hasConflict) {
       availableCleaners.push(cleaner);
     }
   }

@@ -206,9 +206,22 @@ export async function registerRoutes(
       const sqft = request.squareFootage || 1000;
       const basement = request.basement || false;
       const pricing = calculateBrokeragePrice(serviceType, bedrooms, bathrooms, sqft, basement);
+
+      // Fix 9: Apply the current surge multiplier to the client-facing price.
+      // The subcontractor cost stays fixed — surge revenue goes to the platform margin.
+      const onlineCleaners = await storage.getOnlineCleaners();
+      const allActiveRequests = await storage.getServiceRequests();
+      const activeCount = allActiveRequests.filter(r => ["pending", "broadcasting", "matching"].includes(r.status)).length;
+      const surgeMultiplier = calculateSurgeMultiplier(onlineCleaners.length, activeCount);
+
+      const surgedClientPrice = surgeMultiplier > 1.0
+        ? Math.round((pricing.clientPrice * surgeMultiplier) / 5) * 5
+        : pricing.clientPrice;
+
       const updated = await storage.updateServiceRequest(request.id, {
-        estimatedPrice: String(pricing.clientPrice),
+        estimatedPrice: String(surgedClientPrice),
         subcontractorCost: String(pricing.subcontractorCost),
+        surgeMultiplier: String(surgeMultiplier),
       });
 
       try {
@@ -224,7 +237,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/pricing-estimate", isAuthenticated, async (req, res) => {
-    const { serviceType, bedrooms, bathrooms, squareFootage, basement } = req.query;
+    const { serviceType, bedrooms, bathrooms, squareFootage, basement, applySurge } = req.query;
     const pricing = calculateBrokeragePrice(
       String(serviceType || "standard"),
       Number(bedrooms || 2),
@@ -232,11 +245,29 @@ export async function registerRoutes(
       Number(squareFootage || 1000),
       basement === "true"
     );
+
+    // Fix 9: Optionally apply current surge multiplier to the estimate
+    let surgeMultiplier = 1.0;
+    if (applySurge === "true") {
+      const onlineCleaners = await storage.getOnlineCleaners();
+      const allActiveRequests = await storage.getServiceRequests();
+      const activeCount = allActiveRequests.filter(r => ["pending", "broadcasting", "matching"].includes(r.status)).length;
+      surgeMultiplier = calculateSurgeMultiplier(onlineCleaners.length, activeCount);
+    }
+
+    const surgedPrice = surgeMultiplier > 1.0
+      ? Math.round((pricing.clientPrice * surgeMultiplier) / 5) * 5
+      : pricing.clientPrice;
+
+    const surgedPlatformFee = surgedPrice - pricing.subcontractorCost;
+    const surgedMargin = surgedPrice > 0 ? ((surgedPlatformFee / surgedPrice) * 100) : 0;
+
     res.json({
-      estimatedPrice: pricing.clientPrice,
+      estimatedPrice: surgedPrice,
       subcontractorCost: pricing.subcontractorCost,
-      platformFee: pricing.platformFee,
-      marginPercent: pricing.marginPercent,
+      platformFee: Math.round(surgedPlatformFee * 100) / 100,
+      marginPercent: Math.round(surgedMargin * 10) / 10,
+      surgeMultiplier,
     });
   });
 
@@ -492,12 +523,8 @@ export async function registerRoutes(
     res.json({ client, serviceRequests, jobs });
   });
 
-  app.patch("/api/admin/clients/:id", isAuthenticated, async (req, res) => {
-    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
-    const updated = await storage.updateClient(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ message: "Client not found" });
-    res.json(updated);
-  });
+  // Fix 8: Removed first (unsafe) PATCH /api/admin/clients/:id handler that passed req.body directly.
+  // The safe handler with field allowlist is registered later in the file.
 
   app.get("/api/admin/cleaners/:id", isAuthenticated, async (req, res) => {
     if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
@@ -507,12 +534,8 @@ export async function registerRoutes(
     res.json({ cleaner, jobs });
   });
 
-  app.patch("/api/admin/cleaners/:id", isAuthenticated, async (req, res) => {
-    if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
-    const updated = await storage.updateCleaner(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ message: "Cleaner not found" });
-    res.json(updated);
-  });
+  // Fix 8: Removed first (unsafe) PATCH /api/admin/cleaners/:id handler that passed req.body directly.
+  // The safe handler with field allowlist is registered later in the file.
 
   app.get("/api/jobs", isAuthenticated, async (req, res) => {
     if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
@@ -571,9 +594,10 @@ export async function registerRoutes(
       if (safeUpdate.status === "completed" && job.cleanerId) {
         const cleaner = await storage.getCleaner(job.cleanerId);
         if (cleaner) {
+          // Fix 6: Use cleanerPay (what the cleaner earns), not job.price (client price with margin)
           await storage.updateCleaner(cleaner.id, {
             totalJobs: (cleaner.totalJobs || 0) + 1,
-            totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.price)).toFixed(2),
+            totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.cleanerPay || 0)).toFixed(2),
           });
         }
 
@@ -927,9 +951,10 @@ export async function registerRoutes(
       }
 
       if (status === "completed") {
+        // Fix 6: Use cleanerPay (what the cleaner earns), not job.price (the client-facing amount with margin)
         await storage.updateCleaner(cleaner.id, {
           totalJobs: (cleaner.totalJobs || 0) + 1,
-          totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.price)).toFixed(2),
+          totalRevenue: (Number(cleaner.totalRevenue || 0) + Number(job.cleanerPay || 0)).toFixed(2),
         });
         if (job.serviceRequestId) {
           await storage.updateServiceRequest(job.serviceRequestId, { status: "completed" });
