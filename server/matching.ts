@@ -3,6 +3,8 @@ import { db } from "./db";
 import { jobOffers, serviceRequests } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { getUncachableStripeClient } from "./stripeClient";
+import { authStorage } from "./replit_integrations/auth";
+import { sendBookingConfirmedEmail } from "./sendgrid";
 import type { ServiceRequest, Cleaner } from "@shared/schema";
 
 export interface MatchedCleaner {
@@ -400,6 +402,19 @@ export async function acceptJobOffer(offerId: string, cleanerId: string): Promis
       jobId: job.id,
       serviceRequestId: request.id,
     });
+
+    // Email: booking confirmed
+    const clientAuthUser = await authStorage.getUser(request.userId).catch(() => null);
+    if (clientAuthUser?.email) {
+      sendBookingConfirmedEmail(
+        clientAuthUser.email,
+        clientAuthUser.firstName || "Client",
+        cleaner.name,
+        request.propertyAddress,
+        new Date(request.requestedDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        `$${Number(job.price).toFixed(2)}`
+      ).catch(() => {});
+    }
 
     // Notify admins if payment charge failed so they can follow up
     if (!paymentIntentId) {

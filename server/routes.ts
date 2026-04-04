@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { isAuthenticated, authStorage } from "./replit_integrations/auth";
@@ -7,14 +7,34 @@ import {
   insertPaymentSchema, insertReviewSchema, insertServiceRequestSchema,
   insertCleanerAvailabilitySchema, insertUserProfileSchema, insertNotificationSchema,
   insertContractorOnboardingSchema, insertContractorApplicationSchema, insertDisputeSchema,
-  insertMessageSchema,
+  insertMessageSchema, insertRecurringBookingSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { z } from "zod";
 import { calculatePrice, calculateBrokeragePrice, broadcastJobOffers, acceptJobOffer, declineJobOffer, findMatchingCleaners, calculateSurgeMultiplier } from "./matching";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
-import { sendApplicationApprovedEmail, sendApplicationRejectedEmail } from "./sendgrid";
+import {
+  sendApplicationApprovedEmail, sendApplicationRejectedEmail,
+  sendBookingConfirmedEmail, sendCleanerEnRouteEmail, sendJobCompletedEmail,
+  sendCancellationConfirmedEmail, sendRecurringBookingCreatedEmail, sendTipReceivedEmail,
+} from "./sendgrid";
 import { sendToUser, broadcast, broadcastToRole } from "./ws";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Multer config — store uploads on disk under /uploads, 10 MB limit per file
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const upload = multer({
+  dest: uploadDir,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 function handleZodError(err: unknown) {
   if (err instanceof ZodError) {
@@ -947,6 +967,16 @@ export async function registerRoutes(
             serviceRequestId: job.serviceRequestId,
           });
           sendToUser(sr.userId, { type: "job_status_update", jobId: job.id, status: "in_route", serviceRequestId: job.serviceRequestId });
+          // Email: cleaner en route
+          const clientUser = await authStorage.getUser(sr.userId);
+          if (clientUser?.email) {
+            sendCleanerEnRouteEmail(
+              clientUser.email,
+              clientUser.firstName || "Client",
+              cleaner.name,
+              job.propertyAddress
+            ).catch(() => {});
+          }
         }
         await storage.updateServiceRequest(job.serviceRequestId, { status: "in_route" });
       }
@@ -969,6 +999,18 @@ export async function registerRoutes(
               jobId: job.id,
               serviceRequestId: job.serviceRequestId,
             });
+            // Email: job completed + rate prompt
+            const clientUser = await authStorage.getUser(sr.userId);
+            const appDomain = process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000";
+            if (clientUser?.email) {
+              sendJobCompletedEmail(
+                clientUser.email,
+                clientUser.firstName || "Client",
+                cleaner.name,
+                job.propertyAddress,
+                `https://${appDomain}/rate/${job.serviceRequestId}`
+              ).catch(() => {});
+            }
           }
         }
       }
@@ -1459,8 +1501,10 @@ export async function registerRoutes(
       const hoursUntilService = (serviceDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       const withinCancellationWindow = hoursUntilService <= 24 && hoursUntilService > 0;
       let cancellationFeeCharged = false;
+      let refundAmount: string | undefined;
 
       if (withinCancellationWindow) {
+        // Late cancellation: charge $50 fee
         const profile = await storage.getUserProfile(userId);
         if (profile?.stripeCustomerId && profile?.stripePaymentMethodId) {
           try {
@@ -1472,12 +1516,32 @@ export async function registerRoutes(
               payment_method: profile.stripePaymentMethodId,
               confirm: true,
               off_session: true,
-              description: `Cancellation fee for service request ${sr.id}`,
+              description: `Late cancellation fee — service request ${sr.id}`,
             });
             cancellationFeeCharged = true;
           } catch (feeErr) {
             console.error("Failed to charge cancellation fee:", feeErr);
           }
+        }
+      } else if (sr.jobId) {
+        // Free cancellation outside 24h: issue a full Stripe refund if payment was already captured
+        try {
+          const payments = await storage.getPaymentsByJobId(sr.jobId);
+          const capturedPayment = payments.find(p => p.type === "incoming" && p.status === "paid" && p.stripePaymentIntentId);
+          if (capturedPayment?.stripePaymentIntentId) {
+            const stripe = await getUncachableStripeClient();
+            const refund = await stripe.refunds.create({
+              payment_intent: capturedPayment.stripePaymentIntentId,
+              reason: "requested_by_customer",
+            });
+            if (refund.status === "succeeded" || refund.status === "pending") {
+              await storage.updatePayment(capturedPayment.id, { status: "refunded" } as any);
+              refundAmount = `$${(Number(capturedPayment.amount)).toFixed(2)}`;
+              console.log(`[cancel] Refunded ${refundAmount} for SR ${sr.id}, refund ${refund.id}`);
+            }
+          }
+        } catch (refundErr) {
+          console.error("Failed to issue refund:", refundErr);
         }
       }
 
@@ -1492,7 +1556,20 @@ export async function registerRoutes(
         await storage.updateJob(sr.jobId, { status: "cancelled" });
       }
 
-      const feeNote = cancellationFeeCharged ? " A $50 cancellation fee was charged." : "";
+      // Send cancellation confirmation email
+      const authUser = await authStorage.getUser(userId);
+      if (authUser?.email) {
+        sendCancellationConfirmedEmail(
+          authUser.email,
+          authUser.firstName || "Client",
+          sr.propertyAddress,
+          serviceDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+          cancellationFeeCharged,
+          refundAmount
+        ).catch(() => {});
+      }
+
+      const feeNote = cancellationFeeCharged ? " A $50 cancellation fee was charged." : refundAmount ? ` A refund of ${refundAmount} has been issued.` : "";
       const cancelMsg = `Client cancelled the booking for ${sr.propertyAddress} (${new Date(sr.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}).${feeNote}`;
 
       // Notify all admins
@@ -2095,6 +2172,245 @@ export async function registerRoutes(
       res.json({ multiplier, onlineCount: onlineCleaners.length, activeRequests: activeRequests.length });
     } catch (err: unknown) {
       res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // ─── Serve uploaded job photos ───────────────────────────────────────────────
+  app.use("/uploads", express.static(uploadDir));
+
+  // ─── RECURRING BOOKINGS ───────────────────────────────────────────────────────
+  app.get("/api/recurring-bookings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const admin = await isAdmin(req);
+      const bookings = admin
+        ? await storage.getAllRecurringBookings()
+        : await storage.getRecurringBookingsByUserId(userId);
+      res.json(bookings);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/recurring-bookings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const validated = insertRecurringBookingSchema.parse({ ...req.body, userId });
+
+      // Compute estimated price with surge
+      const pricing = calculateBrokeragePrice(
+        validated.serviceType || "standard",
+        validated.bedrooms || 2,
+        validated.bathrooms || 1,
+        validated.squareFootage || 1000,
+        validated.basement || false
+      );
+
+      // Calculate next service date based on dayOfWeek
+      let nextServiceDate: Date | undefined;
+      if (validated.dayOfWeek !== undefined && validated.dayOfWeek !== null) {
+        const today = new Date();
+        const daysUntil = (validated.dayOfWeek - today.getDay() + 7) % 7 || 7;
+        nextServiceDate = new Date(today);
+        nextServiceDate.setDate(today.getDate() + daysUntil);
+      }
+
+      const rb = await storage.createRecurringBooking({
+        ...validated,
+        estimatedPrice: String(pricing.clientPrice),
+        nextServiceDate,
+      } as any);
+
+      // Send confirmation email
+      const authUser = await authStorage.getUser(userId);
+      if (authUser?.email) {
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        sendRecurringBookingCreatedEmail(
+          authUser.email,
+          authUser.firstName || "Client",
+          validated.propertyAddress,
+          validated.frequency,
+          nextServiceDate ? nextServiceDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) : "TBD",
+          `$${pricing.clientPrice.toFixed(0)}`
+        ).catch(() => {});
+      }
+
+      res.json(rb);
+    } catch (err: unknown) {
+      res.status(400).json({ message: handleZodError(err) });
+    }
+  });
+
+  app.patch("/api/recurring-bookings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const rb = await storage.getRecurringBooking(req.params.id);
+      if (!rb) return res.status(404).json({ message: "Recurring booking not found" });
+      const admin = await isAdmin(req);
+      if (rb.userId !== userId && !admin) return res.status(403).json({ message: "Not your booking" });
+
+      const { isActive, frequency, dayOfWeek, preferredTime, specialInstructions, preferredCleanerId } = req.body;
+      const updated = await storage.updateRecurringBooking(rb.id, {
+        ...(isActive !== undefined && { isActive }),
+        ...(frequency !== undefined && { frequency }),
+        ...(dayOfWeek !== undefined && { dayOfWeek }),
+        ...(preferredTime !== undefined && { preferredTime }),
+        ...(specialInstructions !== undefined && { specialInstructions }),
+        ...(preferredCleanerId !== undefined && { preferredCleanerId }),
+      });
+      res.json(updated);
+    } catch (err: unknown) {
+      res.status(400).json({ message: (err as Error).message });
+    }
+  });
+
+  app.delete("/api/recurring-bookings/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const rb = await storage.getRecurringBooking(req.params.id);
+      if (!rb) return res.status(404).json({ message: "Recurring booking not found" });
+      const admin = await isAdmin(req);
+      if (rb.userId !== userId && !admin) return res.status(403).json({ message: "Not your booking" });
+      await storage.deleteRecurringBooking(rb.id);
+      res.json({ success: true });
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // ─── JOB PHOTOS (Before / After) ─────────────────────────────────────────────
+  app.get("/api/jobs/:id/photos", isAuthenticated, async (req, res) => {
+    try {
+      const job = await storage.getJob(req.params.id);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+      const photos = await storage.getJobPhotos(job.id);
+      res.json(photos);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  app.post("/api/jobs/:id/photos", isAuthenticated, upload.array("photos", 10), async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      const job = await storage.getJob(req.params.id);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+
+      const admin = await isAdmin(req);
+      const cleaner = await storage.getCleanerByUserId(userId);
+      const isJobCleaner = cleaner && job.cleanerId === cleaner.id;
+      if (!admin && !isJobCleaner) return res.status(403).json({ message: "Only the assigned cleaner or an admin can upload photos" });
+
+      const type = (req.body.type === "after") ? "after" : "before";
+      const files: Express.Multer.File[] = req.files || [];
+      if (files.length === 0) return res.status(400).json({ message: "No valid image files received" });
+
+      const saved = await Promise.all(files.map(file => {
+        // Rename to a permanent path with original extension
+        const ext = path.extname(file.originalname) || ".jpg";
+        const dest = path.join(uploadDir, `${file.filename}${ext}`);
+        fs.renameSync(file.path, dest);
+        return storage.createJobPhoto({
+          jobId: job.id,
+          type,
+          url: `/uploads/${file.filename}${ext}`,
+          uploadedByUserId: userId,
+        });
+      }));
+
+      res.json(saved);
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  app.delete("/api/job-photos/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const admin = await isAdmin(req);
+      // Only admin can delete photos for now
+      if (!admin) return res.status(403).json({ message: "Admin only" });
+      await storage.deleteJobPhoto(req.params.id);
+      res.json({ success: true });
+    } catch (err: unknown) {
+      res.status(500).json({ message: (err as Error).message });
+    }
+  });
+
+  // ─── TIPPING ─────────────────────────────────────────────────────────────────
+  app.post("/api/jobs/:id/tip", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const job = await storage.getJob(req.params.id);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+      if (job.status !== "completed") return res.status(400).json({ message: "Can only tip on completed jobs" });
+      if (job.tipAmount) return res.status(400).json({ message: "Tip already submitted for this job" });
+
+      // Verify caller is the client who booked this job
+      const client = await storage.getClient(job.clientId);
+      if (!client || client.userId !== userId) return res.status(403).json({ message: "Not your job" });
+
+      const { amount } = req.body;
+      const tipDollars = Number(amount);
+      if (!tipDollars || tipDollars < 1 || tipDollars > 500) {
+        return res.status(400).json({ message: "Tip must be between $1 and $500" });
+      }
+
+      const profile = await storage.getUserProfile(userId);
+      if (!profile?.stripeCustomerId || !profile?.stripePaymentMethodId) {
+        return res.status(400).json({ message: "No payment method on file. Please add a card first." });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(tipDollars * 100),
+        currency: "usd",
+        customer: profile.stripeCustomerId,
+        payment_method: profile.stripePaymentMethodId,
+        confirm: true,
+        off_session: true,
+        description: `Tip for cleaning job ${job.id} at ${job.propertyAddress}`,
+        metadata: { jobId: job.id, userId, type: "tip" },
+      });
+
+      const updatedJob = await storage.updateJob(job.id, {
+        tipAmount: String(tipDollars.toFixed(2)),
+        tipStripeIntentId: paymentIntent.id,
+        tipPaidAt: new Date(),
+      });
+
+      // Notify the cleaner
+      if (job.cleanerId) {
+        const cleaner = await storage.getCleaner(job.cleanerId);
+        if (cleaner?.userId) {
+          await storage.createNotification({
+            userId: cleaner.userId,
+            title: `You received a $${tipDollars.toFixed(0)} tip! 🎉`,
+            message: `A client left you a tip for your cleaning at ${job.propertyAddress}. Great work!`,
+            type: "tip_received",
+            jobId: job.id,
+          });
+          sendToUser(cleaner.userId, { type: "tip_received", jobId: job.id, amount: tipDollars });
+
+          // Send email to cleaner
+          const cleanerUser = await authStorage.getUser(cleaner.userId);
+          const clientUser = await authStorage.getUser(userId);
+          if (cleanerUser?.email) {
+            sendTipReceivedEmail(
+              cleanerUser.email,
+              cleaner.name,
+              clientUser?.firstName || "A client",
+              job.propertyAddress,
+              tipDollars.toFixed(2)
+            ).catch(() => {});
+          }
+        }
+      }
+
+      res.json({ success: true, job: updatedJob, paymentIntentId: paymentIntent.id });
+    } catch (err: unknown) {
+      const msg = (err as any)?.raw?.message || (err as Error).message;
+      res.status(500).json({ message: `Tip failed: ${msg}` });
     }
   });
 

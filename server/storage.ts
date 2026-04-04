@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and, desc, gte, sql as drizzleSql } from "drizzle-orm";
 import {
-  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages, aiUsageLogs,
+  clients, cleaners, jobs, payments, reviews, userProfiles, serviceRequests, cleanerAvailability, notifications, jobOffers, contractorOnboarding, contractorApplications, disputes, messages, aiUsageLogs, recurringBookings, jobPhotos,
   type Client, type InsertClient,
   type Cleaner, type InsertCleaner,
   type Job, type InsertJob,
@@ -17,6 +17,8 @@ import {
   type Dispute, type InsertDispute,
   type Message, type InsertMessage,
   type AiUsageLog,
+  type RecurringBooking, type InsertRecurringBooking,
+  type JobPhoto, type InsertJobPhoto,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -104,6 +106,19 @@ export interface IStorage {
 
   rateClientForJob(jobId: string, rating: number, note: string): Promise<Job | undefined>;
   getCleanerByUserIdForUpdate(userId: string): Promise<Cleaner | undefined>;
+
+  // Recurring bookings
+  getRecurringBookingsByUserId(userId: string): Promise<RecurringBooking[]>;
+  getRecurringBooking(id: string): Promise<RecurringBooking | undefined>;
+  createRecurringBooking(data: InsertRecurringBooking): Promise<RecurringBooking>;
+  updateRecurringBooking(id: string, data: Partial<RecurringBooking>): Promise<RecurringBooking | undefined>;
+  deleteRecurringBooking(id: string): Promise<boolean>;
+  getAllRecurringBookings(): Promise<RecurringBooking[]>;
+
+  // Job photos
+  getJobPhotos(jobId: string): Promise<JobPhoto[]>;
+  createJobPhoto(data: InsertJobPhoto): Promise<JobPhoto>;
+  deleteJobPhoto(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -501,6 +516,50 @@ export class DatabaseStorage implements IStorage {
       totalTokens,
       dailyUsage,
     };
+  }
+
+  // === RECURRING BOOKINGS ===
+  async getRecurringBookingsByUserId(userId: string): Promise<RecurringBooking[]> {
+    return db.select().from(recurringBookings).where(eq(recurringBookings.userId, userId)).orderBy(desc(recurringBookings.createdAt));
+  }
+
+  async getRecurringBooking(id: string): Promise<RecurringBooking | undefined> {
+    const [rb] = await db.select().from(recurringBookings).where(eq(recurringBookings.id, id));
+    return rb;
+  }
+
+  async createRecurringBooking(data: InsertRecurringBooking): Promise<RecurringBooking> {
+    const [rb] = await db.insert(recurringBookings).values(data).returning();
+    return rb;
+  }
+
+  async updateRecurringBooking(id: string, data: Partial<RecurringBooking>): Promise<RecurringBooking | undefined> {
+    const [rb] = await db.update(recurringBookings).set(data).where(eq(recurringBookings.id, id)).returning();
+    return rb;
+  }
+
+  async deleteRecurringBooking(id: string): Promise<boolean> {
+    const result = await db.delete(recurringBookings).where(eq(recurringBookings.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllRecurringBookings(): Promise<RecurringBooking[]> {
+    return db.select().from(recurringBookings).orderBy(desc(recurringBookings.createdAt));
+  }
+
+  // === JOB PHOTOS ===
+  async getJobPhotos(jobId: string): Promise<JobPhoto[]> {
+    return db.select().from(jobPhotos).where(eq(jobPhotos.jobId, jobId)).orderBy(jobPhotos.createdAt);
+  }
+
+  async createJobPhoto(data: InsertJobPhoto): Promise<JobPhoto> {
+    const [photo] = await db.insert(jobPhotos).values(data).returning();
+    return photo;
+  }
+
+  async deleteJobPhoto(id: string): Promise<boolean> {
+    const result = await db.delete(jobPhotos).where(eq(jobPhotos.id, id)).returning();
+    return result.length > 0;
   }
 }
 

@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Navigation, Clock, CheckCheck } from "lucide-react";
+import { Calendar, MapPin, DollarSign, PlayCircle, CheckCircle2, Star, MessageCircle, Navigation, Clock, CheckCheck, Camera, Upload, Image, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +88,138 @@ function StarRating({ value, onChange }: { value: number; onChange: (n: number) 
   );
 }
 
+interface JobPhoto {
+  id: string;
+  jobId: string;
+  type: "before" | "after";
+  url: string;
+  uploadedByUserId: string;
+  createdAt: string;
+}
+
+function PhotoPanel({ jobId, toast }: { jobId: string; toast: (opts: any) => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadType, setUploadType] = useState<"before" | "after">("before");
+
+  const { data: photos, refetch } = useQuery<JobPhoto[]>({
+    queryKey: ["/api/jobs", jobId, "photos"],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${jobId}/photos`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load photos");
+      return res.json();
+    },
+  });
+
+  const handleUpload = async (type: "before" | "after") => {
+    setUploadType(type);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) formData.append("photos", files[i]);
+      formData.append("type", uploadType);
+      const res = await fetch(`/api/jobs/${jobId}/photos`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Upload failed");
+      toast({ title: `${files.length} ${uploadType} photo${files.length > 1 ? "s" : ""} uploaded!` });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const beforePhotos = photos?.filter(p => p.type === "before") || [];
+  const afterPhotos = photos?.filter(p => p.type === "after") || [];
+
+  return (
+    <div className="mt-3 space-y-3 border-t pt-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-medium text-muted-foreground">Job Photos</span>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-xs gap-1"
+          disabled={uploading}
+          onClick={() => handleUpload("before")}
+          data-testid={`button-upload-before-${jobId}`}
+        >
+          <Camera className="h-3 w-3" />
+          {uploading && uploadType === "before" ? "Uploading..." : "+ Before"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-xs gap-1"
+          disabled={uploading}
+          onClick={() => handleUpload("after")}
+          data-testid={`button-upload-after-${jobId}`}
+        >
+          <Camera className="h-3 w-3" />
+          {uploading && uploadType === "after" ? "Uploading..." : "+ After"}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+          data-testid={`input-photo-upload-${jobId}`}
+        />
+      </div>
+      {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
+        <div className="grid grid-cols-2 gap-3">
+          {beforePhotos.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Before ({beforePhotos.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {beforePhotos.map(p => (
+                  <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" data-testid={`photo-before-${p.id}`}>
+                    <img
+                      src={p.url}
+                      alt="Before"
+                      className="h-16 w-16 object-cover rounded-md border hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {afterPhotos.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">After ({afterPhotos.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {afterPhotos.map(p => (
+                  <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" data-testid={`photo-after-${p.id}`}>
+                    <img
+                      src={p.url}
+                      alt="After"
+                      className="h-16 w-16 object-cover rounded-md border hover:opacity-80 transition-opacity"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ContractorJobs() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -96,6 +228,7 @@ export default function ContractorJobs() {
   const [clientRatingNote, setClientRatingNote] = useState("");
   const [activeChatJobId, setActiveChatJobId] = useState<string | null>(null);
   const [arrivalTimeSelections, setArrivalTimeSelections] = useState<Record<string, string>>({});
+  const [openPhotoJobIds, setOpenPhotoJobIds] = useState<Set<string>>(new Set());
 
   const gpsWatchRef = useRef<number | null>(null);
   const [trackingJobId, setTrackingJobId] = useState<string | null>(null);
@@ -367,8 +500,26 @@ export default function ContractorJobs() {
                           >
                             <MessageCircle className="h-3.5 w-3.5" /> Chat
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={`gap-1 ${openPhotoJobIds.has(job.id) ? "text-primary" : ""}`}
+                            onClick={() => {
+                              setOpenPhotoJobIds(prev => {
+                                const next = new Set(prev);
+                                next.has(job.id) ? next.delete(job.id) : next.add(job.id);
+                                return next;
+                              });
+                            }}
+                            data-testid={`button-photos-${job.id}`}
+                          >
+                            <Camera className="h-3.5 w-3.5" /> Photos
+                          </Button>
                         </div>
                       </div>
+                      {openPhotoJobIds.has(job.id) && (
+                        <PhotoPanel jobId={job.id} toast={toast} />
+                      )}
                     </CardContent>
                   </Card>
                 ))}

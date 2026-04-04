@@ -117,6 +117,10 @@ export const jobs = pgTable("jobs", {
   notes: text("notes"),
   clientRating: integer("client_rating"),
   clientRatingNote: text("client_rating_note"),
+  // Tipping
+  tipAmount: decimal("tip_amount", { precision: 10, scale: 2 }),
+  tipStripeIntentId: text("tip_stripe_intent_id"),
+  tipPaidAt: timestamp("tip_paid_at"),
 });
 
 export const payments = pgTable("payments", {
@@ -278,6 +282,48 @@ export type InsertDispute = z.infer<typeof insertDisputeSchema>;
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+// === RECURRING BOOKINGS ===
+export const recurringBookings = pgTable("recurring_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  propertyAddress: text("property_address").notNull(),
+  city: text("city"),
+  zipCode: text("zip_code"),
+  serviceType: text("service_type").notNull().default("standard"),
+  frequency: text("frequency").notNull(), // "weekly" | "biweekly" | "monthly"
+  dayOfWeek: integer("day_of_week"), // 0=Sun … 6=Sat
+  preferredTime: text("preferred_time"), // e.g. "09:00"
+  bedrooms: integer("bedrooms").default(2),
+  bathrooms: integer("bathrooms").default(1),
+  squareFootage: integer("square_footage").default(1000),
+  basement: boolean("basement").default(false),
+  preferredCleanerId: varchar("preferred_cleaner_id"),
+  specialInstructions: text("special_instructions"),
+  isActive: boolean("is_active").notNull().default(true),
+  nextServiceDate: timestamp("next_service_date"),
+  lastServiceDate: timestamp("last_service_date"),
+  estimatedPrice: text("estimated_price"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRecurringBookingSchema = createInsertSchema(recurringBookings).omit({ id: true, createdAt: true, lastServiceDate: true, estimatedPrice: true });
+export type RecurringBooking = typeof recurringBookings.$inferSelect;
+export type InsertRecurringBooking = z.infer<typeof insertRecurringBookingSchema>;
+
+// === JOB PHOTOS ===
+export const jobPhotos = pgTable("job_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull(),
+  type: text("type").notNull(), // "before" | "after"
+  url: text("url").notNull(),   // relative path served by /uploads
+  uploadedByUserId: varchar("uploaded_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertJobPhotoSchema = createInsertSchema(jobPhotos).omit({ id: true, createdAt: true });
+export type JobPhoto = typeof jobPhotos.$inferSelect;
+export type InsertJobPhoto = z.infer<typeof insertJobPhotoSchema>;
 
 export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ id: true, createdAt: true });
 export const insertClientSchema = createInsertSchema(clients).omit({ id: true });

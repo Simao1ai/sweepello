@@ -1,186 +1,31 @@
 # Sweepello - Cleaning Dispatch Platform
 
 ## Overview
-A cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business, available nationwide. Features a triple-portal architecture:
-- **Client Portal**: Clients create accounts, request cleaning services, track bookings, and rate completed services
-- **Admin Portal**: Dispatch management with job tracking, cleaner scorecards, scheduling calendar, client management, payments tracking, and analytics
-- **Contractor Portal**: Cleaners log in to view assigned jobs, manage availability, update job status, and receive notifications
+Sweepello is a nationwide cleaning dispatch dashboard/platform for managing an Airbnb turnover cleaning brokerage business. It features a triple-portal architecture to serve clients, contractors, and administrators. The platform aims to streamline the process of booking, managing, and executing cleaning services, providing a comprehensive solution for all stakeholders involved.
 
-## Tech Stack
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS + Shadcn UI
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth (OIDC with Google, GitHub, email support)
-- **Payments**: Stripe Connect (express accounts for contractor payouts), stripe-replit-sync for schema/webhook management
-- **Routing**: Wouter
-- **State**: TanStack React Query
+## User Preferences
+I prefer simple language. I like functional programming. I want iterative development. Ask before making major changes. I prefer detailed explanations.
 
-## Client Payment System
-- **Card storage**: Stripe SetupIntent flow — clients save a card in My Account (Billing tab) using `@stripe/react-stripe-js` Elements
-- **Payment method API**: `GET/POST/DELETE /api/billing/payment-method`, `POST /api/billing/setup-intent`
-- **Booking gate**: Request Service page checks for saved card on file; disables submit and shows "Add Card" link if none
-- **Cancellation policy**: $50 fee applies when canceling within 24 hours of scheduled SERVICE time (regardless of booking date)
-  - Cancellation endpoint: `POST /api/service-requests/:id/cancel` — checks hours until service, charges $50 via PaymentIntent if within window
-  - My Bookings shows inline warning "⚠️ $50 fee if cancelled now" on eligible bookings
-  - Confirmation dialog shows free vs. paid cancellation clearly
-- **Schema additions**: `userProfiles` — `stripeCustomerId`, `stripePaymentMethodId`, `stripeCardBrand`, `stripeCardLast4`; `serviceRequests` — `paymentStatus`, `canceledAt`, `cancellationFeeCharged`
-- **Test mode**: Stripe test card 4242 4242 4242 4242 is documented in the billing UI
+## System Architecture
+The platform is built with a modern web stack: React + TypeScript + Vite + Tailwind CSS + Shadcn UI for the frontend, and Express.js + TypeScript for the backend. PostgreSQL with Drizzle ORM is used for the database. Authentication is handled via Replit Auth, supporting OIDC with Google, GitHub, and email. Stripe Connect is integrated for payment processing, including express accounts for contractor payouts and `stripe-replit-sync` for schema and webhook management. Routing is managed by Wouter, and state management utilizes TanStack React Query.
 
-## Tech Stack (additional)
-- **Email**: SendGrid (via Replit integration) for transactional emails (application approved/rejected)
-- **Real-time**: WebSocket server (ws package) at /ws path for live location, job status, in-app chat
-- **Maps**: Leaflet.js (CDN) + custom LiveMap component for GPS tracking of cleaners
+The UI/UX design emphasizes a clean and intuitive interface, with distinct portal-specific dashboards and navigation (AppSidebar). Key features include:
+- **Client Payment System**: Secure card storage via Stripe SetupIntent, $50 cancellation fee within 24 hours, and a tipping system for cleaners post-service.
+- **Recurring Bookings**: Clients can set up, pause, or delete recurring cleaning schedules.
+- **Before/After Job Photos**: Contractors can upload photos, stored locally and served statically.
+- **Real-time Communication**: A WebSocket server (`ws` package) is used for live location tracking, job status updates, and in-app notifications.
+- **Mapping**: Leaflet.js is integrated for GPS tracking of cleaners.
+- **Role-Based Access Control**: Unauthenticated users see a landing page, new users select a role (Client/Contractor), and authenticated users are directed to their respective portals based on their role stored in `userProfiles`. Admin role escalation is prevented server-side.
+- **Contractor Onboarding**: A mandatory 5-step onboarding process for contractors, including business info, e-signatures for agreements and W-9s, insurance details, and Stripe Connect setup.
+- **Admin Detail Panels**: Dedicated sheets for managing client and cleaner profiles, including contact info, administrative controls (active, VIP, featured status), and service/job history.
+- **Sweepo AI Agent**: An autonomous operations manager powered by GPT-4o with function calling capabilities to interact with and manage all platform data. It provides read and write tools for administrative tasks, logs token usage, and provides action cards for tool calls.
+- **AI Usage Dashboard**: Tracks GPT-4o token usage and costs per Sweepo conversation.
+- **Matching Algorithm**: Filters and sorts cleaners based on zip code, availability, and performance metrics. It prioritizes preferred cleaners and creates time-limited job offers with notifications.
+- **Brokerage Pricing Model**: Dynamically calculates client prices based on service type, square footage, and property features, ensuring a 30% margin and minimum pricing.
 
-## Project Structure
-- `client/src/pages/` - Landing, RoleSelection, Dashboard (admin), ClientDashboard, ContractorDashboard, ContractorEarnings, Jobs, Cleaners, Clients, Payments, Analytics, Schedule, RequestService, MyBookings, RateService, ContractorJobs, ContractorAvailability, ContractorNotifications, ContractorOnboarding, ContractorApply (public)
-- `client/src/pages/admin/` - Applications, ReviewModeration, Disputes, Broadcast
-- `client/src/components/` - AppSidebar (role-based), ThemeProvider, ThemeToggle, GoOnlineToggle, JobChat, LiveMap, UI components
-- `client/src/hooks/` - use-auth.ts (authentication hook), use-websocket.ts (real-time WS with auto-reconnect)
-- `server/` - Express API routes, Drizzle DB, storage layer, seed data
-- `server/sendgrid.ts` - SendGrid email client (approval/rejection emails)
-- `server/replit_integrations/auth/` - Replit Auth OIDC integration
-- `shared/schema.ts` - All Drizzle schemas and types
-- `shared/models/auth.ts` - Users and sessions schemas for Replit Auth
-
-## Database Schema
-- **users** - Authentication users (Replit Auth managed)
-- **sessions** - Session storage (Replit Auth managed)
-- **userProfiles** - Role (admin/client/contractor), phone, address, city, zip
-- **clients** - Business client records with property details
-- **cleaners** - Cleaner profiles with service areas, zip codes, and userId for contractor linking
-- **cleanerAvailability** - Weekly availability schedule per cleaner
-- **jobs** - Cleaning job records with status workflow
-- **serviceRequests** - Client-submitted cleaning requests (with preferredCleanerId, squareFootage)
-- **jobOffers** - Uber-style job offer broadcast tracking (serviceRequestId, cleanerId, status, priorityRank, expiresAt)
-- **payments** - Incoming/outgoing payment tracking
-- **reviews** - Post-service ratings with user linkage
-- **notifications** - In-app notifications (userId, title, message, type, jobId, serviceRequestId, jobOfferId, isRead)
-- **contractorOnboarding** - Multi-step contractor onboarding (userId, business info, W-9 signature, insurance, Stripe Connect accountId, onboardingStatus)
-- **contractorApplications** - Public contractor applications (pre-account); status: pending/approved/rejected/waitlisted; admin reviews and triggers approval/rejection emails
-- **disputes** - Dispute resolution records (open/investigating/resolved); admin managed with notes and resolution tracking
-- **aiUsageLogs** - GPT-4o token usage per Sweepo conversation (adminUserId, model, promptTokens, completionTokens, totalTokens, costUsd, rounds, userMessage)
-- **clients** now has isActive, isVip, adminNote fields for admin management
-- **cleaners** now has statusNote, isFeatured, adminNote fields for admin management
-- **reviews** now has moderationStatus (approved/hidden/pending), adminNote, adminModifiedAt for admin moderation
-
-## Admin Detail Panels (Clients & Cleaners)
-- **Client detail**: Clicking any row in /admin/clients opens a Sheet (slide-over) showing:
-  - Client contact info (email, phone, property address, rating)
-  - Admin controls: Active toggle (can book), VIP toggle (priority matching)
-  - Inline admin note (click dashed area to edit)
-  - Service request history (sorted newest first with status badges and price)
-  - Job history (sorted newest first with margin display)
-  - API: `GET /api/admin/clients/:id` → `{ client, serviceRequests, jobs }`
-  - API: `PATCH /api/admin/clients/:id` → update any client fields
-- **Cleaner detail**: Clicking any card in /admin/cleaners opens a Sheet showing:
-  - 4 stat boxes: Rating, On-Time %, Total Jobs, Revenue
-  - Contact info + service areas + pay rate
-  - Admin controls: Active toggle (receives offers), Featured toggle (shown in client picker)
-  - Status note (short visible note on card) and admin note (internal)
-  - Job history split into Active and Past sections
-  - API: `GET /api/admin/cleaners/:id` → `{ cleaner, jobs }`
-  - API: `PATCH /api/admin/cleaners/:id` → update any cleaner fields
-- **Jobs page**: Refresh button (RefreshCw icon) added; staleTime:0 + refetchOnWindowFocus ensures fresh data always shown
-
-## Key Features
-### Client Portal
-- Landing page with hero image, features, how-it-works sections
-- Request cleaning service form with property type (residential/commercial/Airbnb), pricing tiers, preferred cleaner selection
-- My Bookings page with status tracking (Finding Cleaners → Matching → Confirmed → In Progress → Completed)
-- Post-service star rating and review system
-- Location-based cleaner matching by zip code
-
-### Admin Portal
-- **Sweepo AI Agent**: autonomous operations manager (bottom-right, indigo FAB); powered by gpt-4o with 15 admin tools via function calling; can read and act on all data; shows action cards per tool call; quick-prompt chips; streaming text; cache-busts React Query on write actions; token usage logged to DB per conversation
-  - Read tools: list_service_requests, list_jobs, list_cleaners, list_clients, list_applications, list_disputes, get_job_details, get_dashboard_stats
-  - Write tools: broadcast_job_offers, assign_cleaner_to_request, update_job_status, approve_application, reject_application, resolve_dispute, send_notification
-- **AI Usage Dashboard** (`/admin/ai-usage`): tracks GPT-4o token usage per Sweepo conversation; shows today/month/all-time cost, total tokens, daily bar chart (last 30 days), and per-conversation log with token breakdown; pricing: $5/1M input, $15/1M output
-- Dashboard with KPI stats (revenue, margin, jobs, ratings)
-- Scheduling calendar with job events, pending requests, and broadcasting status
-- Uber-style job broadcast: auto-notify available cleaners sorted by rating, or manual assignment
-- Job management with status workflow (pending → broadcasting → assigned → in_progress → completed)
-- Cleaner performance scorecards (rating, on-time %, revenue, service area)
-- Client/property management
-- Payment tracking (incoming from clients, outgoing to cleaners)
-- Analytics with charts
-
-### Contractor Portal
-- **Onboarding (gated)**: 5-step onboarding flow required before accessing jobs
-  - Step 1: Business info (name, contact, address, service zip codes)
-  - Step 2: Independent Subcontractor Agreement (NJ-compliant, agree or decline with e-signature)
-  - Step 3: W-9 tax agreement with electronic signature
-  - Step 4: Liability insurance details (optional but recommended)
-  - Step 5: Stripe Connect payment setup for direct deposit payouts
-  - On completion: auto-creates cleaner profile in cleaners table
-- My Jobs page showing assigned/in-progress/completed jobs
-- Accept/Decline job offers (Uber-style notifications with priority for preferred cleaner)
-- Start and Complete job actions to update status
-- Weekly availability schedule with day toggles and time ranges
-- Notifications page with job offers (accept/decline) and general updates
-- Linked via userId field in cleaners table
-
-### Matching Algorithm (server/matching.ts)
-- Filters cleaners by: zip code match, availability on requested day, active status
-- Sorts by: rating (desc) → on-time % → total jobs
-- Preferred cleaner gets rank 0 (first offer) if available
-- Creates jobOffers with 30-min expiry, sends notifications to contractor userId
-- First to accept gets the job; others auto-expire
-- Brokerage pricing model: sub_cost = sqft * rate + bedroom/bath/basement adjustments
-- Client price = sub_cost / (1 - 30% margin), market floor protection, $120 minimum, rounded to $5
-- Service types: standard ($0.10/sqft sub), deep ($0.14/sqft sub), move-out ($0.18/sqft sub)
-- Sub adjustments: +$8/bedroom over 2, +$20/bathroom over 1, basement = max($40, 0.02*sqft)
-
-## Authentication & Routing
-- Unauthenticated users see the Landing page
-- New users (no profile) see the Role Selection page to choose Client or Contractor
-- Authenticated users with role="client" see the Client Portal (/dashboard, /my-bookings, /request-service, /rate/:id)
-- Authenticated users with role="contractor" see the Contractor Portal (/contractor/dashboard, /contractor/jobs, /contractor/availability, /contractor/notifications, /contractor/earnings)
-- Authenticated users with role="admin" see the Admin Portal (/admin/*)
-- Role is stored in userProfiles table; set on first profile creation via role selection
-- Role escalation is prevented server-side (admin role cannot be self-assigned)
-- New contractors get approvalStatus='pending' on profile creation and see a "Under Review" holding page until an admin approves them
-- Existing contractors with null approvalStatus are treated as approved (legacy accounts)
-- Each portal has distinct sidebar styling (colors, icons, branding)
-
-## API Routes
-### Public
-- GET/POST /api/clients, /api/cleaners, /api/jobs, /api/payments, /api/reviews
-- GET /api/dashboard/stats, /api/calendar
-
-### Authenticated (Client)
-- GET /api/profile, POST /api/profile
-- POST /api/service-requests (auto-broadcasts to matching cleaners)
-- GET /api/service-requests/mine
-- POST /api/service-requests/:id/rate
-- GET /api/available-cleaners?zipCode=X&date=Y
-- GET /api/client/previous-cleaners (for preferred cleaner selection)
-- GET /api/pricing-estimate?propertyType=X&bedrooms=N&bathrooms=N&squareFootage=N
-
-### Authenticated (Contractor)
-- GET /api/contractor/onboarding (get onboarding status)
-- POST /api/contractor/onboarding (save business info - step 1)
-- POST /api/contractor/onboarding/agreement (sign or decline agreement - step 2)
-- POST /api/contractor/onboarding/w9 (sign W-9 - step 3)
-- POST /api/contractor/onboarding/insurance (save insurance info - step 4)
-- POST /api/contractor/onboarding/stripe-connect (create Stripe Connect account link - step 5)
-- GET /api/contractor/onboarding/stripe-status (check Stripe account status)
-- POST /api/contractor/onboarding/complete (finalize onboarding, create cleaner profile)
-- GET /api/contractor/profile, /api/contractor/jobs, /api/contractor/availability
-- POST /api/contractor/availability
-- PATCH /api/contractor/jobs/:id/status
-- GET /api/contractor/offers (pending job offers)
-- POST /api/contractor/offers/:id/accept
-- POST /api/contractor/offers/:id/decline
-- GET /api/notifications
-- PATCH /api/notifications/:id/read
-- POST /api/notifications/read-all
-
-### Authenticated (Admin)
-- GET /api/service-requests (all)
-- PATCH /api/service-requests/:id (assign cleaner, triggers notification)
-- POST /api/service-requests/:id/broadcast (send/re-send offers to cleaners)
-- GET /api/service-requests/:id/offers (view offer statuses)
-- POST /api/cleaner-availability/:cleanerId
-
-## Running
-- `npm run dev` starts both Express backend and Vite frontend on port 5000
+## External Dependencies
+- **Replit Auth**: For user authentication (OIDC with Google, GitHub, email).
+- **Stripe Connect**: For payment processing, client card storage, contractor payouts, and managing subscriptions. `stripe-replit-sync` is used for schema and webhook management.
+- **SendGrid**: For transactional email services (e.g., application approval/rejection, tip notifications).
+- **Leaflet.js**: For map functionalities and GPS tracking.
+- **GPT-4o**: Powers the Sweepo AI Agent for autonomous operations management.
