@@ -141,13 +141,19 @@ export function log(message: string, source = "express") {
     skip: (req) => process.env.NODE_ENV !== "production",
   });
 
+  // Service request creation: 10 per hour, keyed by authenticated user ID (not IP)
+  // so shared IPs (offices, NAT) don't bleed across users.
+  // validate.keyGeneratorIpFallback disabled because the endpoint requires auth —
+  // the key is always a user ID, never a raw IP.
   const serviceRequestLimiter = rateLimit({
-    windowMs: 60 * 1000,        // 1 minute
-    max: 10,                    // 10 service requests/min per IP
+    windowMs: 60 * 60 * 1000,  // 1 hour
+    max: 10,                    // 10 service request submissions per user per hour
     standardHeaders: true,
     legacyHeaders: false,
-    message: { message: "Too many requests. Please wait a moment." },
+    keyGenerator: (req) => (req as any).user?.claims?.sub ?? "unauthenticated",
+    message: { message: "You've submitted too many service requests. Please wait before trying again." },
     skip: (req) => process.env.NODE_ENV !== "production",
+    validate: { keyGeneratorIpFallback: false },
   });
 
   // Apply general limiter to all API routes
@@ -156,8 +162,9 @@ export function log(message: string, source = "express") {
   // Scoped limiters for sensitive endpoints
   app.use("/api/auth", authLimiter);
   app.use("/api/admin/ai-agent", aiLimiter);
-  app.use("/api/service-requests", serviceRequestLimiter);
-  app.use("/api/contractor-applications", serviceRequestLimiter);
+  // Only limit POST (creation) — reads/updates are covered by the general limiter
+  app.post("/api/service-requests", serviceRequestLimiter);
+  app.post("/api/contractor-applications", serviceRequestLimiter);
 
   app.post(
     '/api/stripe/webhook',
