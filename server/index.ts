@@ -10,6 +10,8 @@ import { setupWebSocket } from "./ws";
 import { registerAiAgentRoutes } from "./ai-agent";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const httpServer = createServer(app);
@@ -91,6 +93,72 @@ export function log(message: string, source = "express") {
 (async () => {
   await initStripe();
 
+  // === SECURITY HARDENING ===
+
+  // 1. HTTP security headers (helmet)
+  // CSP is kept permissive enough for Vite, Stripe Elements, Leaflet CDN, and Replit Auth.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'", "wss:", "ws:", "https://api.stripe.com", "https://*.replit.com", "https://*.replit.dev"],
+        frameSrc: ["'self'", "https://js.stripe.com"],
+        workerSrc: ["'self'", "blob:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Required for Leaflet/CDN resources
+  }));
+
+  // 2. Rate limiters — scoped by endpoint sensitivity
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 minute
+    max: 200,                   // 200 req/min per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests, please slow down." },
+    skip: (req) => process.env.NODE_ENV !== "production", // only enforce in prod
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: 30,                    // 30 auth attempts per 15 min
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many authentication attempts, try again later." },
+    skip: (req) => process.env.NODE_ENV !== "production",
+  });
+
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,        // 1 minute
+    max: 15,                    // 15 AI calls/min per IP (GPT-4o is expensive)
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "AI rate limit reached. Please wait a moment." },
+    skip: (req) => process.env.NODE_ENV !== "production",
+  });
+
+  const serviceRequestLimiter = rateLimit({
+    windowMs: 60 * 1000,        // 1 minute
+    max: 10,                    // 10 service requests/min per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests. Please wait a moment." },
+    skip: (req) => process.env.NODE_ENV !== "production",
+  });
+
+  // Apply general limiter to all API routes
+  app.use("/api", generalLimiter);
+
+  // Scoped limiters for sensitive endpoints
+  app.use("/api/auth", authLimiter);
+  app.use("/api/admin/ai-agent", aiLimiter);
+  app.use("/api/service-requests", serviceRequestLimiter);
+  app.use("/api/contractor-applications", serviceRequestLimiter);
+
   app.post(
     '/api/stripe/webhook',
     express.raw({ type: 'application/json' }),
@@ -108,15 +176,34 @@ export function log(message: string, source = "express") {
     }
   );
 
+  // 3. Body size limit — prevent large-payload DoS attacks
   app.use(
     express.json({
+      limit: "1mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       },
     }),
   );
 
-  app.use(express.urlencoded({ extended: false }));
+  app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+  // 4. Request logger — redact sensitive fields to prevent PII/token leakage in logs
+  const SENSITIVE_KEYS = new Set([
+    "password", "token", "secret", "stripeCustomerId", "stripePaymentMethodId",
+    "stripeCardLast4", "stripeCardBrand", "stripeAccountId", "w9Signature",
+    "agreementSignature", "ssn", "taxId", "clientSecret",
+  ]);
+
+  function redactSensitive(obj: any): any {
+    if (!obj || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(redactSensitive);
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      out[k] = SENSITIVE_KEYS.has(k) ? "[REDACTED]" : redactSensitive(v);
+    }
+    return out;
+  }
 
   app.use((req, res, next) => {
     const start = Date.now();
@@ -134,9 +221,13 @@ export function log(message: string, source = "express") {
       if (path.startsWith("/api")) {
         let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
         if (capturedJsonResponse) {
-          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+          // Only log response bodies for non-2xx or when debugging; always redact sensitive fields
+          const redacted = redactSensitive(capturedJsonResponse);
+          const snippet = JSON.stringify(redacted).slice(0, 200);
+          if (res.statusCode >= 400 || process.env.LOG_RESPONSES === "true") {
+            logLine += ` :: ${snippet}`;
+          }
         }
-
         log(logLine);
       }
     });

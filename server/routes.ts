@@ -769,7 +769,8 @@ export async function registerRoutes(
   });
 
   // === CLEANER AVAILABILITY ===
-  app.get("/api/cleaner-availability/:cleanerId", async (req, res) => {
+  // Security hardening: require auth so cleaner schedules can't be enumerated anonymously
+  app.get("/api/cleaner-availability/:cleanerId", isAuthenticated, async (req, res) => {
     const availability = await storage.getCleanerAvailability(req.params.cleanerId);
     res.json(availability);
   });
