@@ -815,9 +815,11 @@ export async function registerRoutes(
       const admin = await isAdmin(req);
       if (!admin) return res.status(403).json({ message: "Admin only" });
 
+      const { slots } = z.object({ slots: z.array(z.record(z.unknown())).default([]) })
+        .parse(req.body);
+
       await storage.deleteCleanerAvailability(req.params.cleanerId);
 
-      const slots = req.body.slots || [];
       const results = [];
       for (const slot of slots) {
         const validated = insertCleanerAvailabilitySchema.parse({
@@ -934,8 +936,10 @@ export async function registerRoutes(
       const cleaner = await storage.getCleanerByUserId(userId);
       if (!cleaner) return res.status(404).json({ message: "No contractor profile linked" });
 
+      const { slots } = z.object({ slots: z.array(z.record(z.unknown())).default([]) })
+        .parse(req.body);
+
       await storage.deleteCleanerAvailability(cleaner.id);
-      const slots = req.body.slots || [];
       const results = [];
       for (const slot of slots) {
         const validated = insertCleanerAvailabilitySchema.parse({
