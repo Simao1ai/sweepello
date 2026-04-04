@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean, date, time } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, date, time, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,7 +19,9 @@ export const userProfiles = pgTable("user_profiles", {
   stripeCardBrand: text("stripe_card_brand"),
   stripeCardLast4: text("stripe_card_last4"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  roleIdx: index("user_profiles_role_idx").on(t.role),
+}));
 
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -39,7 +41,11 @@ export const clients = pgTable("clients", {
   adminNote: text("admin_note"),
   clientRating: decimal("client_rating", { precision: 3, scale: 2 }),
   clientRatingCount: integer("client_rating_count").default(0),
-});
+}, (t) => ({
+  userIdIdx: index("clients_user_id_idx").on(t.userId),
+  zipCodeIdx: index("clients_zip_code_idx").on(t.zipCode),
+  isActiveIdx: index("clients_is_active_idx").on(t.isActive),
+}));
 
 export const cleaners = pgTable("cleaners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -62,7 +68,12 @@ export const cleaners = pgTable("cleaners", {
   currentLat: decimal("current_lat", { precision: 10, scale: 7 }),
   currentLng: decimal("current_lng", { precision: 10, scale: 7 }),
   lastSeenAt: timestamp("last_seen_at"),
-});
+}, (t) => ({
+  userIdIdx:   index("cleaners_user_id_idx").on(t.userId),
+  statusIdx:   index("cleaners_status_idx").on(t.status),
+  featuredIdx: index("cleaners_featured_idx").on(t.isFeatured),
+  onlineIdx:   index("cleaners_online_idx").on(t.isOnline),
+}));
 
 export const cleanerAvailability = pgTable("cleaner_availability", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -71,7 +82,10 @@ export const cleanerAvailability = pgTable("cleaner_availability", {
   startTime: text("start_time").notNull().default("08:00"),
   endTime: text("end_time").notNull().default("18:00"),
   isAvailable: boolean("is_available").notNull().default(true),
-});
+}, (t) => ({
+  cleanerIdIdx:          index("cleaner_avail_cleaner_id_idx").on(t.cleanerId),
+  cleanerDayCompositeIdx: index("cleaner_avail_cleaner_day_idx").on(t.cleanerId, t.dayOfWeek),
+}));
 
 export const serviceRequests = pgTable("service_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -101,7 +115,14 @@ export const serviceRequests = pgTable("service_requests", {
   cancellationFeeCharged: boolean("cancellation_fee_charged").notNull().default(false),
   confirmedArrivalTime: text("confirmed_arrival_time"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  userIdIdx:          index("sr_user_id_idx").on(t.userId),
+  statusIdx:          index("sr_status_idx").on(t.status),
+  assignedCleanerIdx: index("sr_assigned_cleaner_idx").on(t.assignedCleanerId),
+  requestedDateIdx:   index("sr_requested_date_idx").on(t.requestedDate),
+  createdAtIdx:       index("sr_created_at_idx").on(t.createdAt),
+  zipCodeIdx:         index("sr_zip_code_idx").on(t.zipCode),
+}));
 
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -121,7 +142,13 @@ export const jobs = pgTable("jobs", {
   tipAmount: decimal("tip_amount", { precision: 10, scale: 2 }),
   tipStripeIntentId: text("tip_stripe_intent_id"),
   tipPaidAt: timestamp("tip_paid_at"),
-});
+}, (t) => ({
+  clientIdIdx:       index("jobs_client_id_idx").on(t.clientId),
+  cleanerIdIdx:      index("jobs_cleaner_id_idx").on(t.cleanerId),
+  statusIdx:         index("jobs_status_idx").on(t.status),
+  serviceRequestIdx: index("jobs_service_request_id_idx").on(t.serviceRequestId),
+  scheduledDateIdx:  index("jobs_scheduled_date_idx").on(t.scheduledDate),
+}));
 
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -132,7 +159,11 @@ export const payments = pgTable("payments", {
   status: text("status").notNull().default("pending"),
   paidAt: timestamp("paid_at"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
-});
+}, (t) => ({
+  jobIdIdx:     index("payments_job_id_idx").on(t.jobId),
+  cleanerIdIdx: index("payments_cleaner_id_idx").on(t.cleanerId),
+  statusIdx:    index("payments_status_idx").on(t.status),
+}));
 
 export const reviews = pgTable("reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -146,7 +177,12 @@ export const reviews = pgTable("reviews", {
   moderationStatus: text("moderation_status").notNull().default("approved"),
   adminNote: text("admin_note"),
   adminModifiedAt: timestamp("admin_modified_at"),
-});
+}, (t) => ({
+  jobIdIdx:          index("reviews_job_id_idx").on(t.jobId),
+  cleanerIdIdx:      index("reviews_cleaner_id_idx").on(t.cleanerId),
+  clientIdIdx:       index("reviews_client_id_idx").on(t.clientId),
+  moderationIdx:     index("reviews_moderation_status_idx").on(t.moderationStatus),
+}));
 
 export const jobOffers = pgTable("job_offers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -157,7 +193,12 @@ export const jobOffers = pgTable("job_offers", {
   offeredAt: timestamp("offered_at").defaultNow(),
   respondedAt: timestamp("responded_at"),
   expiresAt: timestamp("expires_at"),
-});
+}, (t) => ({
+  serviceRequestIdx: index("job_offers_sr_id_idx").on(t.serviceRequestId),
+  cleanerIdIdx:      index("job_offers_cleaner_id_idx").on(t.cleanerId),
+  statusIdx:         index("job_offers_status_idx").on(t.status),
+  expiresAtIdx:      index("job_offers_expires_at_idx").on(t.expiresAt),
+}));
 
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -170,7 +211,11 @@ export const notifications = pgTable("notifications", {
   jobOfferId: varchar("job_offer_id"),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  userIdIdx:          index("notifications_user_id_idx").on(t.userId),
+  userUnreadIdx:      index("notifications_user_unread_idx").on(t.userId, t.isRead),
+  createdAtIdx:       index("notifications_created_at_idx").on(t.createdAt),
+}));
 
 export const contractorOnboarding = pgTable("contractor_onboarding", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -223,7 +268,11 @@ export const contractorApplications = pgTable("contractor_applications", {
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at").defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
-});
+}, (t) => ({
+  statusIdx:    index("contractor_apps_status_idx").on(t.status),
+  emailIdx:     index("contractor_apps_email_idx").on(t.email),
+  createdAtIdx: index("contractor_apps_created_at_idx").on(t.createdAt),
+}));
 
 export const disputes = pgTable("disputes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -239,7 +288,12 @@ export const disputes = pgTable("disputes", {
   resolutionNote: text("resolution_note"),
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
-});
+}, (t) => ({
+  statusIdx:      index("disputes_status_idx").on(t.status),
+  jobIdIdx:       index("disputes_job_id_idx").on(t.jobId),
+  reportedByIdx:  index("disputes_reported_by_idx").on(t.reportedByUserId),
+  clientIdIdx:    index("disputes_client_id_idx").on(t.clientId),
+}));
 
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -250,7 +304,11 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   isRead: boolean("is_read").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  jobIdIdx:    index("messages_job_id_idx").on(t.jobId),
+  senderIdx:   index("messages_sender_id_idx").on(t.senderId),
+  jobUnreadIdx: index("messages_job_unread_idx").on(t.jobId, t.isRead),
+}));
 
 export const aiUsageLogs = pgTable("ai_usage_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -263,7 +321,10 @@ export const aiUsageLogs = pgTable("ai_usage_logs", {
   costUsd: decimal("cost_usd", { precision: 10, scale: 8 }).notNull().default("0"),
   rounds: integer("rounds").notNull().default(1),
   userMessage: text("user_message"),
-});
+}, (t) => ({
+  createdAtIdx:   index("ai_logs_created_at_idx").on(t.createdAt),
+  adminUserIdx:   index("ai_logs_admin_user_id_idx").on(t.adminUserId),
+}));
 
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
 
@@ -305,7 +366,11 @@ export const recurringBookings = pgTable("recurring_bookings", {
   lastServiceDate: timestamp("last_service_date"),
   estimatedPrice: text("estimated_price"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  userIdIdx:        index("recurring_bookings_user_id_idx").on(t.userId),
+  isActiveIdx:      index("recurring_bookings_is_active_idx").on(t.isActive),
+  nextServiceIdx:   index("recurring_bookings_next_service_idx").on(t.nextServiceDate),
+}));
 
 export const insertRecurringBookingSchema = createInsertSchema(recurringBookings).omit({ id: true, createdAt: true, lastServiceDate: true, estimatedPrice: true });
 export type RecurringBooking = typeof recurringBookings.$inferSelect;
@@ -319,7 +384,10 @@ export const jobPhotos = pgTable("job_photos", {
   url: text("url").notNull(),   // relative path served by /uploads
   uploadedByUserId: varchar("uploaded_by_user_id"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  jobIdIdx:  index("job_photos_job_id_idx").on(t.jobId),
+  typeIdx:   index("job_photos_type_idx").on(t.jobId, t.type),
+}));
 
 export const insertJobPhotoSchema = createInsertSchema(jobPhotos).omit({ id: true, createdAt: true });
 export type JobPhoto = typeof jobPhotos.$inferSelect;
