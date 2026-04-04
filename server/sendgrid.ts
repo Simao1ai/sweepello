@@ -157,18 +157,26 @@ export async function sendCancellationConfirmedEmail(
   clientName: string,
   address: string,
   dateStr: string,
-  feeCharged: boolean,
+  tier: "free" | "half" | "full",
+  chargeAmount?: string,
   refundAmount?: string
 ) {
-  const feeNote = feeCharged
-    ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 16px 0; border-radius: 4px;">
-         <p style="margin: 0; color: #92400e;">A <strong>$50 late-cancellation fee</strong> has been charged to your card on file per our cancellation policy.</p>
-       </div>`
-    : refundAmount
-    ? `<div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 16px; margin: 16px 0; border-radius: 4px;">
-         <p style="margin: 0; color: #065f46;">A full refund of <strong>${escapeHtml(refundAmount)}</strong> has been issued and should appear in 5–10 business days.</p>
-       </div>`
-    : `<p style="color: #374151; line-height: 1.6;">No charge was made — you cancelled within the free window.</p>`;
+  let feeNote: string;
+  if (tier === "free") {
+    feeNote = refundAmount
+      ? `<div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 16px; margin: 16px 0; border-radius: 4px;">
+           <p style="margin: 0; color: #065f46;">A full refund of <strong>${escapeHtml(refundAmount)}</strong> has been issued and should appear in 5–10 business days.</p>
+         </div>`
+      : `<p style="color: #374151; line-height: 1.6;">No charge — you cancelled with more than 24 hours' notice.</p>`;
+  } else if (tier === "half") {
+    feeNote = `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 16px 0; border-radius: 4px;">
+      <p style="margin: 0; color: #92400e;">Per our policy, a <strong>50% cancellation fee${chargeAmount ? ` of ${escapeHtml(chargeAmount)}` : ""}</strong> has been charged (12–24 hours' notice).${refundAmount ? ` A partial refund of <strong>${escapeHtml(refundAmount)}</strong> has been issued.` : ""}</p>
+    </div>`;
+  } else {
+    feeNote = `<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; margin: 16px 0; border-radius: 4px;">
+      <p style="margin: 0; color: #991b1b;">This booking was cancelled within 12 hours of service. Per our policy, <strong>no refund</strong> is issued${chargeAmount ? ` and the full amount of ${escapeHtml(chargeAmount)} has been retained` : ""}.</p>
+    </div>`;
+  }
 
   await sendEmail(to, 'Booking Cancellation Confirmed', emailWrapper(`
     <h2>Booking Cancelled</h2>

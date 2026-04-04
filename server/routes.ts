@@ -1518,49 +1518,103 @@ export async function registerRoutes(
       const serviceDate = new Date(sr.requestedDate);
       const now = new Date();
       const hoursUntilService = (serviceDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-      const withinCancellationWindow = hoursUntilService <= 24 && hoursUntilService > 0;
+
+      // Three-tier cancellation policy:
+      //   24h+  → free, full refund if already paid
+      //   12–24h → 50% of booking price charged / 50% refunded
+      //   <12h   → 100% charge, no refund
+      type CancelTier = "free" | "half" | "full";
+      const tier: CancelTier =
+        hoursUntilService >= 24 ? "free" :
+        hoursUntilService >= 12 ? "half" : "full";
+
       let cancellationFeeCharged = false;
       let refundAmount: string | undefined;
+      let chargeAmount: string | undefined;
 
-      if (withinCancellationWindow) {
-        // Late cancellation: charge $50 fee
-        const profile = await storage.getUserProfile(userId);
-        if (profile?.stripeCustomerId && profile?.stripePaymentMethodId) {
+      const bookingPrice = Number(sr.estimatedPrice || 0);
+
+      if (tier === "free") {
+        // Full refund if payment already captured
+        if (sr.jobId) {
           try {
-            const stripe = await getUncachableStripeClient();
-            await stripe.paymentIntents.create({
-              amount: 5000,
-              currency: "usd",
-              customer: profile.stripeCustomerId,
-              payment_method: profile.stripePaymentMethodId,
-              confirm: true,
-              off_session: true,
-              description: `Late cancellation fee — service request ${sr.id}`,
-            });
-            cancellationFeeCharged = true;
-          } catch (feeErr) {
-            console.error("Failed to charge cancellation fee:", feeErr);
+            const payments = await storage.getPaymentsByJobId(sr.jobId);
+            const capturedPayment = payments.find(p => p.type === "incoming" && p.status === "paid" && p.stripePaymentIntentId);
+            if (capturedPayment?.stripePaymentIntentId) {
+              const stripe = await getUncachableStripeClient();
+              const refund = await stripe.refunds.create({
+                payment_intent: capturedPayment.stripePaymentIntentId,
+                reason: "requested_by_customer",
+              });
+              if (refund.status === "succeeded" || refund.status === "pending") {
+                await storage.updatePayment(capturedPayment.id, { status: "refunded" } as any);
+                refundAmount = `$${Number(capturedPayment.amount).toFixed(2)}`;
+                console.log(`[cancel] Full refund ${refundAmount} for SR ${sr.id}`);
+              }
+            }
+          } catch (refundErr) {
+            console.error("Failed to issue full refund:", refundErr);
           }
         }
-      } else if (sr.jobId) {
-        // Free cancellation outside 24h: issue a full Stripe refund if payment was already captured
-        try {
-          const payments = await storage.getPaymentsByJobId(sr.jobId);
-          const capturedPayment = payments.find(p => p.type === "incoming" && p.status === "paid" && p.stripePaymentIntentId);
-          if (capturedPayment?.stripePaymentIntentId) {
-            const stripe = await getUncachableStripeClient();
-            const refund = await stripe.refunds.create({
-              payment_intent: capturedPayment.stripePaymentIntentId,
-              reason: "requested_by_customer",
-            });
-            if (refund.status === "succeeded" || refund.status === "pending") {
-              await storage.updatePayment(capturedPayment.id, { status: "refunded" } as any);
-              refundAmount = `$${(Number(capturedPayment.amount)).toFixed(2)}`;
-              console.log(`[cancel] Refunded ${refundAmount} for SR ${sr.id}, refund ${refund.id}`);
+      } else {
+        // half (50%) or full (100%) charge
+        const chargePercent = tier === "half" ? 0.5 : 1.0;
+
+        if (sr.jobId) {
+          // Payment may already be captured — issue partial or no refund
+          try {
+            const payments = await storage.getPaymentsByJobId(sr.jobId);
+            const capturedPayment = payments.find(p => p.type === "incoming" && p.status === "paid" && p.stripePaymentIntentId);
+            if (capturedPayment?.stripePaymentIntentId) {
+              const stripe = await getUncachableStripeClient();
+              const capturedCents = Math.round(Number(capturedPayment.amount) * 100);
+              if (tier === "half") {
+                // Refund 50%
+                const refundCents = Math.round(capturedCents * 0.5);
+                const refund = await stripe.refunds.create({
+                  payment_intent: capturedPayment.stripePaymentIntentId,
+                  amount: refundCents,
+                  reason: "requested_by_customer",
+                });
+                if (refund.status === "succeeded" || refund.status === "pending") {
+                  refundAmount = `$${(refundCents / 100).toFixed(2)}`;
+                  chargeAmount = `$${(capturedCents / 100 - refundCents / 100).toFixed(2)}`;
+                  cancellationFeeCharged = true;
+                  console.log(`[cancel] 50% refund ${refundAmount} for SR ${sr.id}`);
+                }
+              } else {
+                // No refund — full charge retained
+                chargeAmount = `$${(capturedCents / 100).toFixed(2)}`;
+                cancellationFeeCharged = true;
+                console.log(`[cancel] No refund (within 12h) for SR ${sr.id}`);
+              }
+            }
+          } catch (refundErr) {
+            console.error("Failed to process partial refund:", refundErr);
+          }
+        } else if (bookingPrice > 0) {
+          // Payment not yet captured — charge via saved card
+          const profile = await storage.getUserProfile(userId);
+          if (profile?.stripeCustomerId && profile?.stripePaymentMethodId) {
+            try {
+              const chargeCents = Math.round(bookingPrice * chargePercent * 100);
+              const stripe = await getUncachableStripeClient();
+              await stripe.paymentIntents.create({
+                amount: chargeCents,
+                currency: "usd",
+                customer: profile.stripeCustomerId,
+                payment_method: profile.stripePaymentMethodId,
+                confirm: true,
+                off_session: true,
+                description: `Cancellation fee (${tier === "half" ? "50%" : "100%"}) — service request ${sr.id}`,
+              });
+              cancellationFeeCharged = true;
+              chargeAmount = `$${(chargeCents / 100).toFixed(2)}`;
+              console.log(`[cancel] Charged ${chargeAmount} (${tier}) for SR ${sr.id}`);
+            } catch (feeErr) {
+              console.error("Failed to charge cancellation fee:", feeErr);
             }
           }
-        } catch (refundErr) {
-          console.error("Failed to issue refund:", refundErr);
         }
       }
 
@@ -1583,12 +1637,17 @@ export async function registerRoutes(
           authUser.firstName || "Client",
           sr.propertyAddress,
           serviceDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-          cancellationFeeCharged,
+          tier,
+          chargeAmount,
           refundAmount
         ).catch(() => {});
       }
 
-      const feeNote = cancellationFeeCharged ? " A $50 cancellation fee was charged." : refundAmount ? ` A refund of ${refundAmount} has been issued.` : "";
+      const feeNote = tier === "free"
+        ? (refundAmount ? ` A full refund of ${refundAmount} has been issued.` : " No charge.")
+        : tier === "half"
+          ? (chargeAmount ? ` A 50% cancellation fee of ${chargeAmount} was charged${refundAmount ? ` and ${refundAmount} refunded` : ""}.` : " A 50% cancellation fee applies.")
+          : (chargeAmount ? ` The full booking amount of ${chargeAmount} was retained (cancelled within 12 hours).` : " No refund — cancelled within 12 hours.");
       const cancelMsg = `Client cancelled the booking for ${sr.propertyAddress} (${new Date(sr.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}).${feeNote}`;
 
       // Notify all admins
@@ -1617,12 +1676,26 @@ export async function registerRoutes(
         }
       }
 
+      const responseMessage =
+        tier === "free"
+          ? refundAmount
+            ? `Booking cancelled. A full refund of ${refundAmount} has been issued.`
+            : "Booking cancelled successfully. No charge."
+          : tier === "half"
+            ? chargeAmount
+              ? `Booking cancelled. A 50% fee of ${chargeAmount} was charged${refundAmount ? ` and ${refundAmount} refunded` : ""}.`
+              : "Booking cancelled. A 50% cancellation fee applies (12–24 hours notice)."
+            : chargeAmount
+              ? `Booking cancelled. The full amount of ${chargeAmount} was retained — cancellations within 12 hours are non-refundable.`
+              : "Booking cancelled. No refund — cancelled within 12 hours of service.";
+
       res.json({
         success: true,
+        tier,
         cancellationFeeCharged,
-        message: cancellationFeeCharged
-          ? "Booking cancelled. A $50 cancellation fee has been charged to your card."
-          : "Booking cancelled successfully.",
+        chargeAmount,
+        refundAmount,
+        message: responseMessage,
       });
     } catch (err: unknown) {
       console.error("Cancel error:", err);
