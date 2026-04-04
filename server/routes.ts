@@ -597,15 +597,14 @@ export async function registerRoutes(
   app.patch("/api/jobs/:id", isAuthenticated, async (req, res) => {
     try {
       if (!(await isAdmin(req))) return res.status(403).json({ message: "Admin only" });
-      const allowedFields = z.object({
-        status: z.enum(["pending", "broadcasting", "assigned", "in_progress", "completed", "cancelled"]).optional(),
+      const safeUpdate = z.object({
+        status: z.enum(["pending", "broadcasting", "assigned", "in_route", "in_progress", "completed", "cancelled"]).optional(),
         scheduledDate: z.coerce.date().optional(),
-        notes: z.string().optional(),
-        specialInstructions: z.string().optional(),
-        startedAt: z.coerce.date().optional(),
-        completedAt: z.coerce.date().optional(),
-      });
-      const safeUpdate = allowedFields.parse(req.body);
+        notes: z.string().max(2000).nullable().optional(),
+        specialInstructions: z.string().max(2000).nullable().optional(),
+        startedAt: z.coerce.date().nullable().optional(),
+        completedAt: z.coerce.date().nullable().optional(),
+      }).strict().parse(req.body);
       const job = await storage.updateJob(req.params.id, safeUpdate);
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
@@ -688,13 +687,12 @@ export async function registerRoutes(
         z.object({
           assignedCleanerId: z.string().min(1),
           status: z.literal("confirmed"),
-        }),
+        }).strict(),
         // General update branch: status or instructions only
         z.object({
-          assignedCleanerId: z.undefined(),
           status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_route", "in_progress", "completed", "cancelled"]).optional(),
           specialInstructions: z.string().max(2000).optional(),
-        }),
+        }).strict(),
       ]);
       const body = bodySchema.parse(req.body);
 
@@ -1832,7 +1830,7 @@ export async function registerRoutes(
       const body = z.object({
         status: z.enum(["pending", "approved", "rejected", "waitlisted"]),
         adminNote: z.string().max(2000).optional(),
-      }).parse(req.body);
+      }).strict().parse(req.body);
 
       const { id } = req.params;
       const application = await storage.getContractorApplication(id);
