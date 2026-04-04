@@ -18,8 +18,10 @@ import {
   Home,
   MessageCircle,
   Navigation,
+  RefreshCw,
+  Pause,
 } from "lucide-react";
-import type { ServiceRequest } from "@shared/schema";
+import type { ServiceRequest, RecurringBooking } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import LiveMap from "@/components/live-map";
@@ -61,6 +63,12 @@ export default function ClientDashboard() {
   });
 
   const { data: profile } = useQuery<any>({ queryKey: ["/api/profile"] });
+
+  const { data: recurringBookings } = useQuery<RecurringBooking[]>({
+    queryKey: ["/api/recurring-bookings"],
+  });
+
+  const activeRecurring = recurringBookings?.filter(r => r.isActive) ?? [];
 
   const handleWsMessage = useCallback((msg: any) => {
     if (msg.type === "cleaner_location" || msg.type === "cleaner_online") {
@@ -302,6 +310,64 @@ export default function ClientDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {(activeRecurring.length > 0 || recurringBookings === undefined) && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <RefreshCw className="h-4 w-4 text-primary" />
+              My Recurring Bookings
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => navigate("/my-bookings")} data-testid="button-manage-recurring">
+              Manage <ArrowRight className="h-3 w-3" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {recurringBookings === undefined ? (
+              Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)
+            ) : activeRecurring.slice(0, 3).map(rb => (
+              <div
+                key={rb.id}
+                className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors"
+                data-testid={`row-recurring-${rb.id}`}
+              >
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium truncate">{rb.propertyAddress}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="secondary" className="text-[10px] capitalize">
+                      {rb.frequency === "biweekly" ? "Every 2 weeks" : rb.frequency === "weekly" ? "Weekly" : "Monthly"}
+                    </Badge>
+                    {rb.nextServiceDate && (
+                      <span>Next: {new Date(rb.nextServiceDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="shrink-0">
+                  {rb.isActive ? (
+                    <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 text-[10px]">Active</Badge>
+                  ) : (
+                    <Badge className="bg-muted text-muted-foreground text-[10px]" variant="secondary">
+                      <Pause className="h-2.5 w-2.5 mr-1" /> Paused
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+            {activeRecurring.length === 0 && recurringBookings !== undefined && (
+              <p className="text-sm text-muted-foreground text-center py-4">No active recurring schedules.</p>
+            )}
+            {recurringBookings && recurringBookings.filter(r => r.isActive).length > 3 && (
+              <p className="text-xs text-muted-foreground text-center pt-1">
+                + {recurringBookings.filter(r => r.isActive).length - 3} more —{" "}
+                <button className="underline" onClick={() => navigate("/my-bookings")} data-testid="button-view-all-recurring">view all</button>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {activeChatJobId && user && (
         <JobChat

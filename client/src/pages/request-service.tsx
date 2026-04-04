@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp, CreditCard, AlertCircle } from "lucide-react";
+import { MapPin, Calendar, Home, ArrowLeft, Star, Zap, Sparkles, Truck, TrendingUp, CreditCard, AlertCircle, RefreshCw } from "lucide-react";
 import { AddressSearch } from "@/components/address-search";
 
 interface SurgeData {
@@ -39,6 +39,9 @@ export default function RequestService() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOnDemand, setIsOnDemand] = useState(false);
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<"weekly" | "biweekly" | "monthly">("biweekly");
+  const [recurringDayOfWeek, setRecurringDayOfWeek] = useState(1); // Monday
   const addressPrefilled = useRef(false);
 
   const { data: profile } = useQuery<UserProfile | null>({ queryKey: ["/api/profile"] });
@@ -127,10 +130,34 @@ export default function RequestService() {
       const res = await apiRequest("POST", "/api/service-requests", body);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (makeRecurring) {
+        try {
+          await apiRequest("POST", "/api/recurring-bookings", {
+            propertyAddress: formData.propertyAddress,
+            city: formData.city,
+            zipCode: formData.zipCode,
+            serviceType: formData.serviceType,
+            bedrooms: formData.bedrooms,
+            bathrooms: formData.bathrooms,
+            squareFootage: formData.squareFootage,
+            basement: formData.basement,
+            frequency: recurringFrequency,
+            dayOfWeek: recurringDayOfWeek,
+            preferredTime: formData.preferredTime,
+            specialInstructions: formData.specialInstructions,
+            preferredCleanerId: formData.preferredCleanerId || undefined,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/recurring-bookings"] });
+        } catch {
+          toast({ title: "Recurring setup failed", description: "Your booking was submitted but the recurring schedule could not be saved.", variant: "destructive" });
+        }
+      }
       toast({
         title: "Request submitted!",
-        description: "We're notifying available cleaners in your area. You'll be matched shortly.",
+        description: makeRecurring
+          ? "Booking submitted and recurring schedule created!"
+          : "We're notifying available cleaners in your area. You'll be matched shortly.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/service-requests/mine"] });
       navigate("/my-bookings");
@@ -436,6 +463,64 @@ export default function RequestService() {
                 value={formData.specialInstructions}
                 onChange={e => setFormData({ ...formData, specialInstructions: e.target.value })}
               />
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="make-recurring" className="flex items-center gap-2 font-medium cursor-pointer">
+                    <RefreshCw className="h-4 w-4 text-primary" /> Make this recurring
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Auto-book this cleaning on a schedule</p>
+                </div>
+                <Switch
+                  id="make-recurring"
+                  checked={makeRecurring}
+                  onCheckedChange={setMakeRecurring}
+                  data-testid="switch-make-recurring"
+                />
+              </div>
+              {makeRecurring && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Frequency</Label>
+                    <Select
+                      value={recurringFrequency}
+                      onValueChange={v => setRecurringFrequency(v as "weekly" | "biweekly" | "monthly")}
+                    >
+                      <SelectTrigger data-testid="select-recurring-frequency">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Every week</SelectItem>
+                        <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                        <SelectItem value="monthly">Every month</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Preferred Day</Label>
+                    <Select
+                      value={String(recurringDayOfWeek)}
+                      onValueChange={v => setRecurringDayOfWeek(Number(v))}
+                    >
+                      <SelectTrigger data-testid="select-recurring-day">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"].map((d, i) => (
+                          <SelectItem key={i} value={String(i)}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="col-span-2 text-xs text-muted-foreground bg-primary/5 rounded-md px-3 py-2">
+                    We'll automatically create a new booking request every{" "}
+                    {recurringFrequency === "weekly" ? "week" : recurringFrequency === "biweekly" ? "2 weeks" : "month"}{" "}
+                    on {["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][recurringDayOfWeek]}s.
+                  </p>
+                </div>
+              )}
             </div>
 
             <Card className={`border-dashed ${surgeLabel && isOnDemand ? "bg-orange-50/50 dark:bg-orange-950/10 border-orange-300 dark:border-orange-700" : "bg-muted/50"}`}>
