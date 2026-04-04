@@ -27,13 +27,18 @@ export default function JobChat({ jobId, currentUserId, currentUserRole, current
 
   const { data: messages } = useQuery<Message[]>({
     queryKey: ["/api/messages", jobId],
-    queryFn: () => fetch(`/api/messages/${jobId}`).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/messages/${jobId}`, { credentials: "include" });
+      if (!r.ok) return [];
+      const data = await r.json();
+      return Array.isArray(data) ? data : [];
+    },
     enabled: isOpen,
     refetchInterval: isOpen ? 10000 : false,
   });
 
   useEffect(() => {
-    if (messages) setLocalMessages(messages);
+    if (Array.isArray(messages)) setLocalMessages(messages);
   }, [messages]);
 
   const handleWsMessage = useCallback((msg: any) => {
