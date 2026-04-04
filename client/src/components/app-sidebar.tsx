@@ -70,6 +70,7 @@ const clientNavItems = [
 const contractorNavItems = [
   { title: "Dashboard", url: "/contractor/dashboard", icon: LayoutDashboard },
   { title: "My Jobs", url: "/contractor/jobs", icon: Briefcase },
+  { title: "Notifications", url: "/contractor/notifications", icon: Bell },
   { title: "Availability", url: "/contractor/availability", icon: Clock },
   { title: "Earnings", url: "/contractor/earnings", icon: TrendingUp },
   { title: "Payouts", url: "/contractor/payouts", icon: Banknote },
