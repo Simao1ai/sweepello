@@ -41,6 +41,29 @@ async function isContractor(req: any): Promise<boolean> {
   return profile?.role === "contractor";
 }
 
+// Fix 5: Helper to check if a user is authorized to read/write messages on a job.
+// Authorized users: the client who booked, the cleaner assigned, or any admin.
+async function isAuthorizedForJob(job: any, userId: string, role: string): Promise<boolean> {
+  if (role === "admin") return true;
+
+  if (role === "contractor") {
+    if (!job.cleanerId) return false;
+    const cleaner = await storage.getCleanerByUserId(userId);
+    return cleaner?.id === job.cleanerId;
+  }
+
+  if (role === "client") {
+    if (job.serviceRequestId) {
+      const sr = await storage.getServiceRequest(job.serviceRequestId);
+      return sr?.userId === userId;
+    }
+    const client = await storage.getClientByUserId(userId);
+    return client?.id === job.clientId;
+  }
+
+  return false;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -688,7 +711,7 @@ export async function registerRoutes(
       }
 
       const safeUpdate = z.object({
-        status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_progress", "completed", "cancelled"]).optional(),
+        status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_route", "in_progress", "completed", "cancelled"]).optional(),
         specialInstructions: z.string().optional(),
       }).parse(req.body);
       const updated = await storage.updateServiceRequest(req.params.id, safeUpdate);
@@ -1924,6 +1947,14 @@ export async function registerRoutes(
       const userId = getUserId(req);
       const profile = await storage.getUserProfile(userId);
       if (!profile) return res.status(403).json({ message: "Not authorized" });
+
+      // Fix 5: Verify the requesting user is authorized for this job
+      const job = await storage.getJob(req.params.jobId);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+
+      const authorized = await isAuthorizedForJob(job, userId, profile.role);
+      if (!authorized) return res.status(403).json({ message: "You are not authorized to view messages for this job" });
+
       const msgs = await storage.getMessagesByJobId(req.params.jobId);
       res.json(msgs);
     } catch (err: unknown) {
@@ -1937,6 +1968,16 @@ export async function registerRoutes(
       const userId = getUserId(req);
       const profile = await storage.getUserProfile(userId);
       if (!profile) return res.status(403).json({ message: "Not authorized" });
+
+      // Fix 5: Validate job exists and user is authorized before saving
+      const { jobId } = req.body;
+      if (!jobId) return res.status(400).json({ message: "jobId is required" });
+
+      const job = await storage.getJob(jobId);
+      if (!job) return res.status(404).json({ message: "Job not found" });
+
+      const authorized = await isAuthorizedForJob(job, userId, profile.role);
+      if (!authorized) return res.status(403).json({ message: "You are not authorized to send messages for this job" });
 
       const parsed = insertMessageSchema.parse(req.body);
       parsed.senderId = userId;

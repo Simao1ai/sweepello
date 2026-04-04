@@ -1,5 +1,9 @@
 import { storage } from "./storage";
-import type { ServiceRequest, Cleaner, CleanerAvailability } from "@shared/schema";
+import { db } from "./db";
+import { jobOffers, serviceRequests } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { getUncachableStripeClient } from "./stripeClient";
+import type { ServiceRequest, Cleaner } from "@shared/schema";
 
 export interface MatchedCleaner {
   cleaner: Cleaner;
@@ -116,7 +120,7 @@ export async function findMatchingCleaners(request: ServiceRequest): Promise<Mat
   const sorted = availableCleaners.sort((a, b) => {
     const ratingDiff = Number(b.rating || 0) - Number(a.rating || 0);
     if (ratingDiff !== 0) return ratingDiff;
-    const onTimeDiff = (b.onTimePercent || 0) - (a.onTimePercent || 0);
+    const onTimeDiff = (Number(b.onTimePercent) || 0) - (Number(a.onTimePercent) || 0);
     if (onTimeDiff !== 0) return onTimeDiff;
     return (b.totalJobs || 0) - (a.totalJobs || 0);
   });
@@ -191,116 +195,219 @@ export async function broadcastJobOffers(serviceRequestId: string): Promise<{ of
   return { offersCreated: newMatches.length, preferredNotified };
 }
 
-export async function acceptJobOffer(offerId: string, cleanerId: string): Promise<{ success: boolean; message: string }> {
-  const offer = await storage.getJobOffer(offerId);
-  if (!offer) return { success: false, message: "Offer not found" };
-  if (offer.cleanerId !== cleanerId) return { success: false, message: "Not your offer" };
-  if (offer.status !== "offered") return { success: false, message: "Offer no longer available" };
-
-  if (offer.expiresAt && new Date(offer.expiresAt) < new Date()) {
-    await storage.updateJobOffer(offerId, { status: "expired" });
-    return { success: false, message: "Offer has expired" };
-  }
-
-  const otherOffers = await storage.getJobOffersByServiceRequest(offer.serviceRequestId);
-  const alreadyAccepted = otherOffers.find(o => o.status === "accepted");
-  if (alreadyAccepted) {
-    await storage.updateJobOffer(offerId, { status: "expired", respondedAt: new Date() });
-    return { success: false, message: "Job already taken by another cleaner" };
-  }
-
-  await storage.updateJobOffer(offerId, { status: "accepted", respondedAt: new Date() });
-
-  for (const other of otherOffers) {
-    if (other.id !== offerId && other.status === "offered") {
-      await storage.updateJobOffer(other.id, { status: "expired", respondedAt: new Date() });
+// Fix 1: Attempt to charge the client's saved card via Stripe PaymentIntent.
+// Returns the PaymentIntent ID on success, null on failure (non-blocking).
+async function chargeClientForJob(
+  userId: string,
+  amountDollars: number,
+  jobId: string,
+  serviceRequestId: string
+): Promise<string | null> {
+  try {
+    const profile = await storage.getUserProfile(userId);
+    if (!profile?.stripeCustomerId || !profile?.stripePaymentMethodId) {
+      console.warn(`[Stripe] No saved card for user ${userId} — skipping charge`);
+      return null;
     }
-  }
 
-  const request = await storage.getServiceRequest(offer.serviceRequestId);
-  if (!request) return { success: false, message: "Service request not found" };
+    const stripe = await getUncachableStripeClient();
+    const amountCents = Math.round(amountDollars * 100);
 
-  const cleaner = await storage.getCleaner(cleanerId);
-  if (!cleaner) return { success: false, message: "Cleaner not found" };
-
-  let client = await storage.getClientByUserId(request.userId);
-  if (!client) {
-    client = await storage.createClient({
-      name: "Client",
-      email: null,
-      phone: null,
-      propertyAddress: request.propertyAddress,
-      propertyType: request.propertyType,
-      userId: request.userId,
-      city: request.city,
-      zipCode: request.zipCode,
-      bedrooms: request.bedrooms,
-      bathrooms: request.bathrooms,
-      notes: null,
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency: "usd",
+      customer: profile.stripeCustomerId,
+      payment_method: profile.stripePaymentMethodId,
+      confirm: true,
+      off_session: true,
+      description: `Cleaning service — Job ${jobId} (SR ${serviceRequestId})`,
+      metadata: { jobId, serviceRequestId, userId },
     });
+
+    console.log(`[Stripe] PaymentIntent ${paymentIntent.id} created for job ${jobId} — status: ${paymentIntent.status}`);
+    return paymentIntent.id;
+  } catch (err: unknown) {
+    console.error(`[Stripe] PaymentIntent creation failed for job ${jobId}:`, (err as Error).message);
+    return null;
   }
+}
 
-  const clientPrice = request.estimatedPrice || "150.00";
-  const subCost = request.subcontractorCost || String(Math.round(Number(clientPrice) * 0.70));
+// Fix 2: Accept a job offer using a DB transaction to prevent race conditions.
+export async function acceptJobOffer(offerId: string, cleanerId: string): Promise<{ success: boolean; message: string }> {
+  // Use a DB transaction to atomically check and claim the offer.
+  // This prevents two cleaners from accepting the same job simultaneously.
+  try {
+    const result = await db.transaction(async (tx) => {
+      // Lock the offer row and read it inside the transaction
+      const [offer] = await tx
+        .select()
+        .from(jobOffers)
+        .where(eq(jobOffers.id, offerId))
+        .for("update");
 
-  const job = await storage.createJob({
-    clientId: client.id,
-    cleanerId,
-    propertyAddress: request.propertyAddress,
-    scheduledDate: request.requestedDate,
-    status: "assigned",
-    price: clientPrice,
-    cleanerPay: subCost,
-    serviceRequestId: request.id,
-    notes: request.specialInstructions,
-  });
+      if (!offer) return { success: false, message: "Offer not found" };
+      if (offer.cleanerId !== cleanerId) return { success: false, message: "Not your offer" };
+      if (offer.status !== "offered") return { success: false, message: "Offer no longer available" };
 
-  await storage.createPayment({
-    jobId: job.id,
-    cleanerId: job.cleanerId,
-    amount: job.price,
-    type: "incoming",
-    status: "pending",
-    paidAt: null,
-  });
-  await storage.createPayment({
-    jobId: job.id,
-    cleanerId: job.cleanerId,
-    amount: job.cleanerPay!,
-    type: "outgoing",
-    status: "pending",
-    paidAt: null,
-  });
+      if (offer.expiresAt && new Date(offer.expiresAt) < new Date()) {
+        await tx.update(jobOffers).set({ status: "expired" }).where(eq(jobOffers.id, offerId));
+        return { success: false, message: "Offer has expired" };
+      }
 
-  await storage.updateServiceRequest(request.id, {
-    status: "confirmed",
-    assignedCleanerId: cleanerId,
-    jobId: job.id,
-  });
+      // Lock the service request row and verify it hasn't been claimed yet
+      const [sr] = await tx
+        .select()
+        .from(serviceRequests)
+        .where(eq(serviceRequests.id, offer.serviceRequestId))
+        .for("update");
 
-  if (cleaner.userId) {
+      if (!sr) return { success: false, message: "Service request not found" };
+
+      // Check service request status — must not already be confirmed/in_progress/completed
+      const alreadyTaken = ["confirmed", "in_progress", "in_route", "completed"].includes(sr.status);
+      if (alreadyTaken) {
+        await tx.update(jobOffers).set({ status: "expired", respondedAt: new Date() }).where(eq(jobOffers.id, offerId));
+        return { success: false, message: "Job already taken by another cleaner" };
+      }
+
+      // Mark this offer as accepted
+      await tx.update(jobOffers).set({ status: "accepted", respondedAt: new Date() }).where(eq(jobOffers.id, offerId));
+
+      // Expire all other outstanding offers for this service request
+      await tx
+        .update(jobOffers)
+        .set({ status: "expired", respondedAt: new Date() })
+        .where(
+          and(
+            eq(jobOffers.serviceRequestId, offer.serviceRequestId),
+            eq(jobOffers.status, "offered")
+          )
+        );
+
+      return { success: true, message: "ok", offerId, serviceRequestId: offer.serviceRequestId };
+    });
+
+    if (!result.success) return result;
+
+    // Outside the transaction: create the job, payments, notifications
+    const serviceRequestId = (result as any).serviceRequestId;
+    const request = await storage.getServiceRequest(serviceRequestId);
+    if (!request) return { success: false, message: "Service request not found" };
+
+    const cleaner = await storage.getCleaner(cleanerId);
+    if (!cleaner) return { success: false, message: "Cleaner not found" };
+
+    let client = await storage.getClientByUserId(request.userId);
+    if (!client) {
+      client = await storage.createClient({
+        name: "Client",
+        email: null,
+        phone: null,
+        propertyAddress: request.propertyAddress,
+        propertyType: request.propertyType,
+        userId: request.userId,
+        city: request.city,
+        zipCode: request.zipCode,
+        bedrooms: request.bedrooms,
+        bathrooms: request.bathrooms,
+        notes: null,
+      });
+    }
+
+    const clientPrice = request.estimatedPrice || "150.00";
+    const subCost = request.subcontractorCost || String(Math.round(Number(clientPrice) * 0.70));
+
+    const job = await storage.createJob({
+      clientId: client.id,
+      cleanerId,
+      propertyAddress: request.propertyAddress,
+      scheduledDate: request.requestedDate,
+      status: "assigned",
+      price: clientPrice,
+      cleanerPay: subCost,
+      serviceRequestId: request.id,
+      notes: request.specialInstructions,
+    });
+
+    // Fix 1: Attempt to charge the client's saved card for the full job price.
+    // This is non-blocking — if it fails, the job still gets created.
+    const paymentIntentId = await chargeClientForJob(
+      request.userId,
+      Number(clientPrice),
+      job.id,
+      request.id
+    );
+
+    const incomingPayment = await storage.createPayment({
+      jobId: job.id,
+      cleanerId: job.cleanerId,
+      amount: job.price,
+      type: "incoming",
+      status: paymentIntentId ? "paid" : "pending",
+      paidAt: paymentIntentId ? new Date() : null,
+    });
+
+    // Store the PaymentIntent ID on the payment record so we can reconcile later
+    if (paymentIntentId) {
+      await storage.updatePayment(incomingPayment.id, { stripePaymentIntentId: paymentIntentId });
+    }
+
+    await storage.createPayment({
+      jobId: job.id,
+      cleanerId: job.cleanerId,
+      amount: subCost,
+      type: "outgoing",
+      status: "pending",
+      paidAt: null,
+    });
+
+    await storage.updateServiceRequest(request.id, {
+      status: "confirmed",
+      assignedCleanerId: cleanerId,
+      jobId: job.id,
+    });
+
+    if (cleaner.userId) {
+      await storage.createNotification({
+        userId: cleaner.userId,
+        title: "Job Confirmed",
+        message: `You've accepted the cleaning at ${request.propertyAddress}. Check your Jobs page for details.`,
+        type: "job_assigned",
+        jobId: job.id,
+        serviceRequestId: request.id,
+      });
+    }
+
+    const cleanerRating = cleaner.rating ? `${Number(cleaner.rating).toFixed(1)} ★` : "New";
     await storage.createNotification({
-      userId: cleaner.userId,
-      title: "Job Confirmed",
-      message: `You've accepted the cleaning at ${request.propertyAddress}. Check your Jobs page for details.`,
+      userId: request.userId,
+      title: "Your Cleaner is Confirmed!",
+      message: `${cleaner.name} (${cleanerRating}) has been assigned to your cleaning at ${request.propertyAddress} on ${new Date(request.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. They will confirm an exact arrival time shortly.`,
       type: "job_assigned",
       jobId: job.id,
       serviceRequestId: request.id,
     });
+
+    // Notify admins if payment charge failed so they can follow up
+    if (!paymentIntentId) {
+      const admins = await storage.getUsersByRole("admin");
+      await Promise.all(admins.map(admin =>
+        storage.createNotification({
+          userId: admin.userId,
+          title: "⚠️ Payment collection pending",
+          message: `Job accepted for ${request.propertyAddress} but no card was charged (client may not have a saved card). Payment of $${Number(clientPrice).toFixed(2)} is pending.`,
+          type: "job_assigned",
+          jobId: job.id,
+          serviceRequestId: request.id,
+        })
+      ));
+    }
+
+    return { success: true, message: "Job accepted successfully" };
+  } catch (err: unknown) {
+    console.error("[acceptJobOffer] Error:", err);
+    return { success: false, message: (err as Error).message || "Failed to accept offer" };
   }
-
-  // Notify the client that their cleaner has been confirmed
-  const cleanerRating = cleaner.rating ? `${Number(cleaner.rating).toFixed(1)} ★` : "New";
-  await storage.createNotification({
-    userId: request.userId,
-    title: "Your Cleaner is Confirmed!",
-    message: `${cleaner.name} (${cleanerRating}) has been assigned to your cleaning at ${request.propertyAddress} on ${new Date(request.requestedDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}. They will confirm an exact arrival time shortly.`,
-    type: "job_assigned",
-    jobId: job.id,
-    serviceRequestId: request.id,
-  });
-
-  return { success: true, message: "Job accepted successfully" };
 }
 
 export async function declineJobOffer(offerId: string, cleanerId: string): Promise<{ success: boolean; message: string }> {

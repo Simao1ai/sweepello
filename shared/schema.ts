@@ -127,6 +127,7 @@ export const payments = pgTable("payments", {
   type: text("type").notNull().default("incoming"),
   status: text("status").notNull().default("pending"),
   paidAt: timestamp("paid_at"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
 });
 
 export const reviews = pgTable("reviews", {

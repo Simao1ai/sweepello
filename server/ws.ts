@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { db } from "./db";
 import { cleaners } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { storage } from "./storage";
 
 interface AuthedSocket extends WebSocket {
   userId?: string;
@@ -30,13 +31,39 @@ export function setupWebSocket(httpServer: Server) {
 
         switch (msg.type) {
           case "auth": {
-            socket.userId = msg.userId;
-            socket.userRole = msg.role;
-            socket.userName = msg.name || "Unknown";
-            socket.cleanerId = msg.cleanerId || null;
-            if (socket.userId) {
-              connections.set(socket.userId, socket);
+            const { userId, role, name, cleanerId } = msg;
+
+            // Fix 3: Validate claimed identity server-side — never trust client-provided role/userId.
+            if (!userId) {
+              socket.send(JSON.stringify({ type: "auth_error", reason: "userId required" }));
+              return;
             }
+
+            const profile = await storage.getUserProfile(userId);
+            if (!profile) {
+              socket.send(JSON.stringify({ type: "auth_error", reason: "User not found" }));
+              return;
+            }
+
+            if (profile.role !== role) {
+              socket.send(JSON.stringify({ type: "auth_error", reason: "Role mismatch" }));
+              return;
+            }
+
+            // If claiming to be a contractor with a specific cleanerId, verify it
+            if (role === "contractor" && cleanerId) {
+              const cleaner = await storage.getCleanerByUserId(userId);
+              if (!cleaner || cleaner.id !== cleanerId) {
+                socket.send(JSON.stringify({ type: "auth_error", reason: "Cleaner identity mismatch" }));
+                return;
+              }
+              socket.cleanerId = cleanerId;
+            }
+
+            socket.userId = userId;
+            socket.userRole = profile.role;
+            socket.userName = name || "Unknown";
+            connections.set(socket.userId, socket);
             socket.send(JSON.stringify({ type: "auth_ok" }));
             break;
           }
@@ -57,13 +84,34 @@ export function setupWebSocket(httpServer: Server) {
           }
 
           case "chat_message": {
+            // Only authenticated sockets may send chat messages
+            if (!socket.userId || !socket.userRole) {
+              socket.send(JSON.stringify({ type: "error", reason: "Not authenticated" }));
+              break;
+            }
+
             const { jobId, content, senderName, senderRole } = msg;
+            if (!jobId || !content) break;
+
+            // Fix 4: Persist the message to the database before broadcasting.
+            try {
+              await storage.createMessage({
+                jobId,
+                senderId: socket.userId,
+                senderRole: socket.userRole,
+                senderName: senderName || socket.userName || "Unknown",
+                content,
+              });
+            } catch (dbErr) {
+              console.error("[WS] Failed to persist chat message:", dbErr);
+            }
+
             broadcastToJob(jobId, {
               type: "new_message",
               jobId,
               senderId: socket.userId,
-              senderName,
-              senderRole,
+              senderName: senderName || socket.userName,
+              senderRole: senderRole || socket.userRole,
               content,
               createdAt: new Date().toISOString(),
             });
