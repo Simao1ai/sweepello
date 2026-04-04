@@ -682,8 +682,24 @@ export async function registerRoutes(
       const request = await storage.getServiceRequest(req.params.id);
       if (!request) return res.status(404).json({ message: "Not found" });
 
-      if (req.body.assignedCleanerId && req.body.status === "confirmed") {
-        const cleaner = await storage.getCleaner(req.body.assignedCleanerId);
+      // Validate the entire body up front
+      const bodySchema = z.union([
+        // Assignment branch: assigning a cleaner and confirming
+        z.object({
+          assignedCleanerId: z.string().min(1),
+          status: z.literal("confirmed"),
+        }),
+        // General update branch: status or instructions only
+        z.object({
+          assignedCleanerId: z.undefined(),
+          status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_route", "in_progress", "completed", "cancelled"]).optional(),
+          specialInstructions: z.string().max(2000).optional(),
+        }),
+      ]);
+      const body = bodySchema.parse(req.body);
+
+      if ("assignedCleanerId" in body && body.assignedCleanerId && body.status === "confirmed") {
+        const cleaner = await storage.getCleaner(body.assignedCleanerId);
         if (!cleaner) return res.status(400).json({ message: "Cleaner not found" });
 
         let client = await storage.getClientByUserId(request.userId);
@@ -705,7 +721,7 @@ export async function registerRoutes(
 
         const job = await storage.createJob({
           clientId: client.id,
-          cleanerId: req.body.assignedCleanerId,
+          cleanerId: body.assignedCleanerId,
           propertyAddress: request.propertyAddress,
           scheduledDate: request.requestedDate,
           status: "assigned",
@@ -734,7 +750,7 @@ export async function registerRoutes(
 
         const updated = await storage.updateServiceRequest(request.id, {
           status: "confirmed",
-          assignedCleanerId: req.body.assignedCleanerId,
+          assignedCleanerId: body.assignedCleanerId,
           jobId: job.id,
         });
 
@@ -754,11 +770,12 @@ export async function registerRoutes(
         return res.json(updated);
       }
 
-      const safeUpdate = z.object({
-        status: z.enum(["pending", "broadcasting", "matching", "confirmed", "in_route", "in_progress", "completed", "cancelled"]).optional(),
-        specialInstructions: z.string().optional(),
-      }).parse(req.body);
-      const updated = await storage.updateServiceRequest(req.params.id, safeUpdate);
+      // General update — body already validated above, pick only the relevant fields
+      const { status, specialInstructions } = body as { assignedCleanerId?: undefined; status?: string; specialInstructions?: string };
+      const updated = await storage.updateServiceRequest(req.params.id, {
+        ...(status !== undefined && { status }),
+        ...(specialInstructions !== undefined && { specialInstructions }),
+      });
       res.json(updated);
     } catch (err: unknown) {
       res.status(400).json({ message: handleZodError(err) });
@@ -1812,26 +1829,30 @@ export async function registerRoutes(
       const profile = await storage.getUserProfile(userId);
       if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
 
+      const body = z.object({
+        status: z.enum(["pending", "approved", "rejected", "waitlisted"]),
+        adminNote: z.string().max(2000).optional(),
+      }).parse(req.body);
+
       const { id } = req.params;
-      const { status, adminNote } = req.body;
       const application = await storage.getContractorApplication(id);
       if (!application) return res.status(404).json({ message: "Application not found" });
 
       const updated = await storage.updateContractorApplication(id, {
-        status,
-        adminNote,
+        status: body.status,
+        adminNote: body.adminNote,
         reviewedAt: new Date(),
       });
 
-      if (status === "approved") {
+      if (body.status === "approved") {
         await sendApplicationApprovedEmail(application.email, application.firstName);
-      } else if (status === "rejected") {
-        await sendApplicationRejectedEmail(application.email, application.firstName, adminNote);
+      } else if (body.status === "rejected") {
+        await sendApplicationRejectedEmail(application.email, application.firstName, body.adminNote);
       }
 
       res.json(updated);
     } catch (err: unknown) {
-      res.status(400).json({ message: (err as Error).message });
+      res.status(400).json({ message: handleZodError(err) });
     }
   });
 
@@ -1861,13 +1882,19 @@ export async function registerRoutes(
       const profile = await storage.getUserProfile(userId);
       if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
 
+      const body = z.object({
+        moderationStatus: z.enum(["approved", "hidden", "pending"]).optional(),
+        adminNote: z.string().max(2000).optional(),
+        comment: z.string().max(5000).optional(),
+        rating: z.number().int().min(1).max(5).optional(),
+      }).strict().parse(req.body);
+
       const { id } = req.params;
-      const { moderationStatus, adminNote, comment, rating } = req.body;
-      const updated = await storage.updateReview(id, { moderationStatus, adminNote, comment, rating });
+      const updated = await storage.updateReview(id, body);
       if (!updated) return res.status(404).json({ message: "Review not found" });
       res.json(updated);
     } catch (err: unknown) {
-      res.status(400).json({ message: (err as Error).message });
+      res.status(400).json({ message: handleZodError(err) });
     }
   });
 
@@ -1878,13 +1905,19 @@ export async function registerRoutes(
       const profile = await storage.getUserProfile(userId);
       if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
 
+      const body = z.object({
+        status: z.enum(["active", "inactive", "suspended"]).optional(),
+        statusNote: z.string().max(500).nullable().optional(),
+        isFeatured: z.boolean().optional(),
+        adminNote: z.string().max(2000).nullable().optional(),
+      }).strict().parse(req.body);
+
       const { id } = req.params;
-      const { status, statusNote, isFeatured, adminNote } = req.body;
-      const updated = await storage.updateCleaner(id, { status, statusNote, isFeatured, adminNote });
+      const updated = await storage.updateCleaner(id, body);
       if (!updated) return res.status(404).json({ message: "Cleaner not found" });
       res.json(updated);
     } catch (err: unknown) {
-      res.status(400).json({ message: (err as Error).message });
+      res.status(400).json({ message: handleZodError(err) });
     }
   });
 
@@ -1895,13 +1928,18 @@ export async function registerRoutes(
       const profile = await storage.getUserProfile(userId);
       if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
 
+      const body = z.object({
+        isActive: z.boolean().optional(),
+        isVip: z.boolean().optional(),
+        adminNote: z.string().max(2000).nullable().optional(),
+      }).strict().parse(req.body);
+
       const { id } = req.params;
-      const { isActive, isVip, adminNote } = req.body;
-      const updated = await storage.updateClient(id, { isActive, isVip, adminNote });
+      const updated = await storage.updateClient(id, body);
       if (!updated) return res.status(404).json({ message: "Client not found" });
       res.json(updated);
     } catch (err: unknown) {
-      res.status(400).json({ message: (err as Error).message });
+      res.status(400).json({ message: handleZodError(err) });
     }
   });
 
@@ -1934,14 +1972,22 @@ export async function registerRoutes(
       const profile = await storage.getUserProfile(userId);
       if (!profile || profile.role !== "admin") return res.status(403).json({ message: "Admin only" });
 
+      const body = z.object({
+        status: z.enum(["open", "investigating", "resolved"]).optional(),
+        adminNote: z.string().max(2000).nullable().optional(),
+        resolutionNote: z.string().max(5000).nullable().optional(),
+      }).strict().parse(req.body);
+
       const { id } = req.params;
-      const { status, adminNote, resolutionNote } = req.body;
-      const resolvedAt = status === "resolved" ? new Date() : undefined;
-      const updated = await storage.updateDispute(id, { status, adminNote, resolutionNote, ...(resolvedAt ? { resolvedAt } : {}) });
+      const resolvedAt = body.status === "resolved" ? new Date() : undefined;
+      const updated = await storage.updateDispute(id, {
+        ...body,
+        ...(resolvedAt ? { resolvedAt } : {}),
+      });
       if (!updated) return res.status(404).json({ message: "Dispute not found" });
       res.json(updated);
     } catch (err: unknown) {
-      res.status(400).json({ message: (err as Error).message });
+      res.status(400).json({ message: handleZodError(err) });
     }
   });
 
